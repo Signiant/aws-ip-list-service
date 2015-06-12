@@ -60,7 +60,9 @@ docker run -e IPLIST_CONFIG_BUCKET=S3-Bucket -e IPLIST_CONFIG_PATH="path/to/conf
 ````
 
 IPLIST_CONFIG_BUCKET = Name of your S3 bucket where the config file is located
+
 IPLIST_CONFIG_PATH = Path to the config.json file
+
 PYTHONUNBUFFERED = Force stdout to be totally unbuffered
 
 If you are not using S3 to hold the config file, the path will be used to find the config file locally
