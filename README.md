@@ -41,8 +41,9 @@ If the key is missing: Do not show the IPs of the category in the result, and in
 
 ## Variables
 
-IPLIST_CONFIG_BUCKET:
-IPLIST_CONFIG_PATH:
+IPLIST_CONFIG_BUCKET
+
+IPLIST_CONFIG_PATH
 
 The following will be needed to connect to AWS using boto
 AWS_ACCESS_KEY_ID: Your AWS access key ID
