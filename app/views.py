@@ -63,7 +63,7 @@ def handle_app(appname):
                     eips = awslib._list_eips(region, filter=exclusions)
                     if verbose:
                         ret[region]['eips'] = eips
-                    if ep_check:
+                    if eip_check:
                         ret[region]['all_ips'].extend(eips)
 
                 if not lb_check == None:
