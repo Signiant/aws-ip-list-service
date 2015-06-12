@@ -41,15 +41,23 @@ If the key is missing: Do not show the IPs of the category in the result, and in
 
 ## Variables
 
-IPLIST_CONFIG_BUCKET
+IPLIST_CONFIG_BUCKET = Name of your S3 bucket where the config file is located
 
-IPLIST_CONFIG_PATH
+IPLIST_CONFIG_PATH = The relative path to the config.json file
+
+If you are not using S3 to hold the config file, IPLIST_CONFIG_PATH will be used to find the file locally.
+
+PYTHONUNBUFFERED = Force stdout to be totally unbuffered
 
 The following will be needed to connect to AWS using boto
 AWS_ACCESS_KEY_ID: Your AWS access key ID
 AWS_SECRET_ACCESS_KEY: Your AWS secret key
 
 Alternatively, boto can use a .boto file located in your home directory
+
+These variables will be required if running outside of AWS.
+
+If running on an EC2 instance, IAM roles should be used.
 
 ## Sample Docker Run
 
@@ -58,11 +66,3 @@ docker run -e IPLIST_CONFIG_BUCKET=S3-Bucket -e IPLIST_CONFIG_PATH="path/to/conf
 -e AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY -e AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY \
 -e PYTHONUNBUFFERED=1 -p 5000:5000 -d --name container-name
 ````
-
-IPLIST_CONFIG_BUCKET = Name of your S3 bucket where the config file is located
-
-IPLIST_CONFIG_PATH = Path to the config.json file
-
-PYTHONUNBUFFERED = Force stdout to be totally unbuffered
-
-If you are not using S3 to hold the config file, the path will be used to find the config file locally
