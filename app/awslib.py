@@ -80,16 +80,16 @@ def _instance_ip(lb_name, region):
     print "Done"
     return instances
 
-def _get_config(bucket_name, file_path):
-    if os.path.isfile(file_path):
+def _get_config(bucket_name, s3_path, local_path):
+    if os.path.isfile(local_path):
         print "Deleting current file..."
-        os.remove(file_path)
+        os.remove(local_path)
         print "Done"
     print "Retrieving config file..."
     conn = S3Connection()
     bucket = conn.lookup(bucket_name)
-    key = Key(bucket, file_path)
-    key.get_contents_to_filename(file_path)
+    key = Key(bucket, s3_path)
+    key.get_contents_to_filename(local_path)
     print "Done"
 
 # Decode dict/list
