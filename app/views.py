@@ -26,6 +26,10 @@ def handle_index():
     
     return render_template("index.html", apps=[app['name'] for app in data['apps']])
 
+@app.route('/healthcheck')
+def handle_healthcheck():
+    return "I'm still here."
+
 @app.route('/<appname>')
 def handle_app(appname):
 
@@ -94,10 +98,6 @@ def handle_app(appname):
         return "Could not load app named: " + appname
     else:    
         return jsonify(**ret)
-
-@app.route('/healthcheck'):
-def handle_healthcheck():
-    return "I'm still here"
 
 def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
     response = make_response(dumps(dict(**kwargs), indent=indent, sort_keys=sort_keys))
