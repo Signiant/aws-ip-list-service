@@ -10,13 +10,13 @@ import os
 
 
 bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
-path = os.environ.get('IPLIST_CONFIG_PATH')
+s3path = os.environ.get('IPLIST_CONFIG_PATH')
 
-if path == None:
+if s3path == None:
     print "No Env Labeled IPLIST_CONFIG_PATH"
     path = join('iplist_config', 'config.json')
 else:
-    awslib._get_config(bucket_name, path)
+    awslib._get_config(bucket_name, s3path)
 
 @app.route('/<appname>')
 def handle_app(appname):
