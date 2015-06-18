@@ -10,6 +10,7 @@ import os
 
 bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
 s3path = os.environ.get('IPLIST_CONFIG_PATH')
+sslonly = os.environ.get('SSLONLY')
 
 path = join('iplist_config', 'config.json')
 
@@ -20,7 +21,12 @@ else:
 
 @app.route('/')
 def handle_index():
-    ret = _check_ssl(request.url, True)
+    if sslonly == "1":
+        proto = request.headers.get("X-Forwarded-Proto")
+        ret = None
+        if not proto == "https":
+            ret = _check_ssl(request.url)
+    
     if not ret == None:
         return ret
 
@@ -35,6 +41,11 @@ def handle_healthcheck():
 
 @app.route('/<appname>')
 def handle_app(appname):
+    if sslonly == "1":
+        proto = request.headers.get("X-Forwarded-Proto")
+        ret = None
+        if not proto == "https":
+            ret = _check_ssl(request.url)
     with open(path) as json_data:
         data = json.load(json_data)
 
@@ -53,7 +64,11 @@ def handle_app(appname):
 
     if verbose:
         print request.url
-    ret = _check_ssl(request.url, verbose)
+    if sslonly:
+        proto = request.headers.get("X-Forwarded-Proto")
+        ret = None
+        if not proto == "https":
+            ret = _check_ssl(request.url, verbose)
     if not ret == None:
         return ret
 
