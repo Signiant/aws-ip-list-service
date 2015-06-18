@@ -3,8 +3,7 @@ from flask import render_template
 import json
 from json import dumps
 from os.path import join
-from flask import make_response
-from flask import request
+from flask import make_response, request, redirect
 import awslib
 import os
 
@@ -21,6 +20,10 @@ else:
 
 @app.route('/')
 def handle_index():
+    ret = _check_ssl(request.url)
+    if not ret == None:
+        return ret
+
     with open(path) as json_data:
         data = json.load(json_data)
     
@@ -32,6 +35,9 @@ def handle_healthcheck():
 
 @app.route('/<appname>')
 def handle_app(appname):
+    ret = _check_ssl(request.url)
+    if not ret == None:
+        return ret
 
     with open(path) as json_data:
         data = json.load(json_data)
@@ -105,3 +111,9 @@ def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
     response.headers['mimetype'] = 'application/json'
     response_code = status
     return response
+
+def _check_ssl(url):
+    if url[:5] == "https":
+        return None
+    else:
+        return redirect("https" + url[4:], code=302)
