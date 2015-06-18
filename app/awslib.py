@@ -49,7 +49,10 @@ def _active_balancer(dns_name, region):
     print "Retrieving record sets..."
     rset = rconn.get_all_rrsets(chosen_zone, name=dns_name, maxitems=1)[0]
     lb_name = rset.alias_dns_name
-    lb_name = re.search('(.*)-[0-9]{9}', lb_name).group(1)
+    if 'dualstack' in lb_name:
+        lb_name = re.search('dualstack.(.*)-[0-9]{9}', lb_name).group(1)
+    else:
+        lb_name = re.search('(.*?)-[0-9]{9}', lb_name).group(1)
     return lb_name
     
 # IPs of running instances
