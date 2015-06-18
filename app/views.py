@@ -23,12 +23,12 @@ else:
 def handle_index():
     if sslonly == "1":
         proto = request.headers.get("X-Forwarded-Proto")
-        ret = None
+        redir = None
         if not proto == "https":
-            ret = _check_ssl(request.url)
+            redir = _check_ssl(request.url)
     
-    if not ret == None:
-        return ret
+    if not redir == None:
+        return redir
 
     with open(path) as json_data:
         data = json.load(json_data)
@@ -41,11 +41,6 @@ def handle_healthcheck():
 
 @app.route('/<appname>')
 def handle_app(appname):
-    if sslonly == "1":
-        proto = request.headers.get("X-Forwarded-Proto")
-        ret = None
-        if not proto == "https":
-            ret = _check_ssl(request.url)
     with open(path) as json_data:
         data = json.load(json_data)
 
@@ -66,11 +61,11 @@ def handle_app(appname):
         print request.url
     if sslonly:
         proto = request.headers.get("X-Forwarded-Proto")
-        ret = None
+        redir = None
         if not proto == "https":
-            ret = _check_ssl(request.url, verbose)
-    if not ret == None:
-        return ret
+            redir = _check_ssl(request.url, verbose)
+    if not redir == None:
+        return redir
 
     for app in data['apps']:
         if appname.lower() == app['name'].lower():
