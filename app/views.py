@@ -10,7 +10,7 @@ import os
 
 bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
 s3path = os.environ.get('IPLIST_CONFIG_PATH')
-sslonly = os.environ.get('SSLONLY')
+nohttps = os.environ.get('NOHTTPS')
 
 path = join('iplist_config', 'config.json')
 
@@ -21,7 +21,7 @@ else:
 
 @app.route('/')
 def handle_index():
-    if sslonly == "1":
+    if nohttps == None:
         proto = request.headers.get("X-Forwarded-Proto")
         redir = None
         if not proto == "https":
@@ -59,7 +59,7 @@ def handle_app(appname):
 
     if verbose:
         print request.url
-    if sslonly:
+    if nohttps == None:
         proto = request.headers.get("X-Forwarded-Proto")
         redir = None
         if not proto == "https":
