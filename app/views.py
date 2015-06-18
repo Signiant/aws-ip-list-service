@@ -20,7 +20,7 @@ else:
 
 @app.route('/')
 def handle_index():
-    ret = _check_ssl(request.url)
+    ret = _check_ssl(request.url, True)
     if not ret == None:
         return ret
 
@@ -35,10 +35,6 @@ def handle_healthcheck():
 
 @app.route('/<appname>')
 def handle_app(appname):
-    ret = _check_ssl(request.url)
-    if not ret == None:
-        return ret
-
     with open(path) as json_data:
         data = json.load(json_data)
 
@@ -54,7 +50,13 @@ def handle_app(appname):
                     verbose = True
             elif "region" in query.lower():
                 chosen_region = query[7:]
-    
+
+    if verbose:
+        print request.url
+    ret = _check_ssl(request.url, verbose)
+    if not ret == None:
+        return ret
+
     for app in data['apps']:
         if appname.lower() == app['name'].lower():
             app_config = app['config']
@@ -112,7 +114,9 @@ def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
     response_code = status
     return response
 
-def _check_ssl(url):
+def _check_ssl(url, verbose=False):
+    if verbose:
+        print "Current scheme: %s" % url[:5]
     if url[:5] == "https":
         return None
     else:
