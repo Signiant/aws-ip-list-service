@@ -70,6 +70,7 @@ def handle_app(appname):
     for app in data['apps']:
         if appname.lower() == app['name'].lower():
             app_config = app['config']
+
             for config in app_config:
                 dnsname = config['dnsname']
                 bs_app = config['beanstalk_app_name']
@@ -83,16 +84,21 @@ def handle_app(appname):
                 eip_check = config.get('show_eip')
                 lb_check = config.get('show_lb_ip')
                 inst_check = config.get('show_inst_ip')
-
-                ret[region] = {}
+                if ret.get(region) == None:
+                    ret[region] = {}
                 lb_name = awslib._active_balancer(dnsname, region)                
                 
-                ret[region]['all_ips'] = []
+                if ret[region].get('all_ips') == None:
+                    ret[region]['all_ips'] = []
 
                 if not eip_check == None:
                     eips = awslib._list_eips(region, filter=exclusions)
                     if verbose:
-                        ret[region]['eips'] = eips
+                        if ret[region].get('eips') == None:
+                            ret[region]['eips'] = eips
+                        else:
+                            ret[region]['eips'].extend(eips)
+
                     if eip_check:
                         ret[region]['all_ips'].extend(eips)
 
@@ -101,14 +107,22 @@ def handle_app(appname):
                     elb = awslib._balancer_ip(lb_url)
 
                     if verbose:
-                        ret[region]['elb'] = elb
+                        if ret[region].get('elb') == None:
+                            ret[region]['elb'] = elb
+                        else:
+                            ret[region]['elb'].extend(elb)
+
                     if lb_check:
                         ret[region]['all_ips'].extend(elb)
 
                 if not inst_check == None:
                     inst_ips = awslib._instance_ip(lb_name, region)
                     if verbose:
-                        ret[region]['instance_ips'] = inst_ips
+                        if ret[region].get('instance_ips') == None:
+                            ret[region]['instance_ips'] = inst_ips
+                        else:
+                            ret[region]['instance_ips'].extend(inst_ips)
+
                     if inst_check:
                         ret[region]['all_ips'].extend(inst_ips)
 
