@@ -21,9 +21,9 @@ else:
 
 @app.route('/')
 def handle_index():
+    redir = None
     if nohttps == None:
         proto = request.headers.get("X-Forwarded-Proto")
-        redir = None
         if not proto == "https":
             redir = _check_ssl(request.url)
     
@@ -59,9 +59,9 @@ def handle_app(appname):
 
     if verbose:
         print request.url
+    redir = None
     if nohttps == None:
         proto = request.headers.get("X-Forwarded-Proto")
-        redir = None
         if not proto == "https":
             redir = _check_ssl(request.url, verbose)
     if not redir == None:
