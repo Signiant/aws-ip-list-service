@@ -3,7 +3,7 @@ from flask import render_template
 import json
 from json import dumps
 from os.path import join
-from flask import make_response, request, redirect
+from flask import make_response, request, redirect, url_for
 import awslib
 import os
 
@@ -16,8 +16,10 @@ path = join('iplist_config', 'config.json')
 
 if s3path == None:
     print "No Env Labeled IPLIST_CONFIG_PATH"
+elif bucket_name == None:
+    print "No bucket name specified"
 else:
-    awslib._get_config(bucket_name, s3path, path)
+    awslib._get_file(bucket_name, s3path, path)
 
 @app.route('/')
 def handle_index():
@@ -72,6 +74,14 @@ def handle_app(appname):
             app_config = app['config']
 
             for config in app_config:
+                
+                if config.get('s3filepath'):
+                    datapath = config.get('localpath')
+                    awslib._get_file(bucket_name, config['s3filepath'], datapath)
+                    with open(datapath) as filedata:
+                        output = json.load(filedata)
+                    return jsonify(**output)
+
                 dnsname = config['dnsname']
                 bs_app = config['beanstalk_app_name']
                 region = config['region']
@@ -127,7 +137,7 @@ def handle_app(appname):
                         ret[region]['all_ips'].extend(inst_ips)
 
     if not ret:
-        return "Could not load app named: " + appname
+        return redirect(url_for('handle_index'), code=302)
     else:    
         return jsonify(**ret)
 
