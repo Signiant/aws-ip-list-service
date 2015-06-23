@@ -83,7 +83,7 @@ def _instance_ip(lb_name, region):
     print "Done"
     return instances
 
-def _get_config(bucket_name, s3_path, local_path):
+def _get_file(bucket_name, s3_path, local_path):
     if os.path.isfile(local_path):
         print "Deleting current file..."
         os.remove(local_path)
