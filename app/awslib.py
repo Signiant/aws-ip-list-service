@@ -43,9 +43,12 @@ def _active_balancer(dns_name, region):
     chosen_zone = None
     print "Looking up zone ID..."
     for zone in zones:
-        if zone['Name'][:-1] in dns_name:
+        if zone['Name'][:-1] == dns_name:
             chosen_zone = zone['Id'][12:]
             break
+        elif zone['Name'][:-1] in dns_name:
+            chosen_zone = zone['Id'][12:]
+
     print "Retrieving record sets..."
     rset = rconn.get_all_rrsets(chosen_zone, name=dns_name, maxitems=1)[0]
     lb_name = rset.alias_dns_name
