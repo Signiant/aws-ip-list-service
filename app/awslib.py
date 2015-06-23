@@ -38,6 +38,9 @@ def _environment_descr(app_name, lb_name, region):
 def _active_balancer(dns_name, region):
     print "Connecting to route53..."
     rconn = boto.route53.connect_to_region(region)
+    if rconn == None:
+        print "Failed to connect to route53, check region in config file"
+        exit(-1)
     zones = rconn.get_all_hosted_zones()
     zones = _decode_dict(zones)['ListHostedZonesResponse']['HostedZones']
     chosen_zone = None
