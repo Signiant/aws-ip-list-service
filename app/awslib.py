@@ -46,10 +46,14 @@ def _active_balancer(dns_name, region):
     chosen_zone = None
     print "Looking up zone ID..."
     for zone in zones:
-        if zone['Name'][:-1] == dns_name:
+        if zone['Name'][:-1].lstrip('.') == dns_name:
+            print "Found zone that equals the dns name"
+            print zone['Name']
             chosen_zone = zone['Id'][12:]
             break
-        elif zone['Name'][:-1] in dns_name:
+        elif zone['Name'][:-1].lstrip('.') in dns_name:
+            print "Found zone that is in the dns_name"
+            print zone['Name']
             chosen_zone = zone['Id'][12:]
 
     print "Retrieving record sets..."
