@@ -46,17 +46,17 @@ def _active_balancer(dns_name, region):
     chosen_zone = None
     print "Looking up zone ID..."
 
-    dns_name = dns_name.split('.', 1)[-1]
-    print "New dns_name is %s" % dns_name
+    temp_dns_name = dns_name.split('.', 1)[-1]
+    print "Temp dns_name is %s" % temp_dns_name
 
     for zone in zones:
-        print "The zone is: %s, the dns_name is %s" % (zone['Name'][:-1], dns_name)
-        if zone['Name'][:-1] == dns_name:
+        print "The zone is: %s, the dns_name is %s" % (zone['Name'][:-1], temp_dns_name)
+        if zone['Name'][:-1] == temp_dns_name:
             print "Found zone that equals the dns name"
             print zone['Name']
             chosen_zone = zone['Id'][12:]
             break
-        elif zone['Name'][:-1] in dns_name:
+        elif zone['Name'][:-1] in temp_dns_name:
             print "Found zone that is in the dns_name"
             print zone['Name']
             chosen_zone = zone['Id'][12:]
