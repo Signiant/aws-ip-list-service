@@ -62,7 +62,7 @@ def _active_balancer(dns_name, region):
             chosen_zone = zone['Id'][12:]
 
     print "Retrieving record sets..."
-    rset = rconn.get_all_rrsets(chosen_zone, name=dns_name, maxitems=1)[0]
+    rset = rconn.get_all_rrsets(chosen_zone, name=dns_name, type="A", maxitems=1)[0]
     print "Record set retrieved is : "
     print rset
     lb_name = rset.alias_dns_name
