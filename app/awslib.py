@@ -45,6 +45,10 @@ def _active_balancer(dns_name, region):
     zones = _decode_dict(zones)['ListHostedZonesResponse']['HostedZones']
     chosen_zone = None
     print "Looking up zone ID..."
+
+    dns_name = dns_name.split('.', 1)[-1]
+    print "New dns_name is %s" % dns_name
+
     for zone in zones:
         print "The zone is: %s, the dns_name is %s" % (zone['Name'][:-1], dns_name)
         if zone['Name'][:-1] == dns_name:
