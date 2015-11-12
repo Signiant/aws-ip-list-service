@@ -1,5 +1,6 @@
 from app import app
 from flask import render_template
+from flask import send_from_directory
 import json
 from json import dumps
 from os.path import join
@@ -141,6 +142,9 @@ def handle_app(appname):
     else:    
         return jsonify(**ret)
 
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
     response = make_response(dumps(dict(**kwargs), indent=indent, sort_keys=sort_keys))
     response.headers['Content-Type'] = 'application/json; charset=utf-8'
