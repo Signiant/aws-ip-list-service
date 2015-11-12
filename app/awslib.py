@@ -50,7 +50,7 @@ def _active_balancer(dns_name, region):
     print "Temp dns_name is %s" % temp_dns_name
 
     for zone in zones:
-        print "The zone is: %s, the dns_name is %s" % (zone['Name'][:-1], temp_dns_name)
+        print "The zone is: %s, the dns_name is %s" % (zone['Name'][:-1], dns_name)
         
         if zone['Name'][:-1] == dns_name:
             print "Found zone that equals the dns name"
@@ -60,12 +60,6 @@ def _active_balancer(dns_name, region):
 
         elif zone['Name'][:-1] == temp_dns_name:
             print "Found zone that equals the dns name"
-            print zone['Name']
-            chosen_zone = zone['Id'][12:]
-            break
-
-        elif zone['Name'][:-1] in temp_dns_name:
-            print "Found zone that is in the dns_name"
             print zone['Name']
             chosen_zone = zone['Id'][12:]
 
