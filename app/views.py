@@ -82,6 +82,14 @@ def handle_app(appname):
                     with open(datapath) as filedata:
                         output = json.load(filedata)
                     return jsonify(**output)
+                elif config.get('R53'):
+                    ret = {}
+                    for item in config['R53']:
+                        ret[item['Name']] = {}
+                        ret[item['Name']]['all_ips'] = []
+                        ret[item['Name']]['all_ips'] = awslib._get_records_from_zone(item['HostedZoneId'], item['Prefix'])
+                        print ret
+                    return jsonify(**ret)
 
                 dnsname = config['dnsname']
                 bs_app = config['beanstalk_app_name']

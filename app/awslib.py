@@ -1,18 +1,17 @@
 import socket
-import boto.route53
-import boto.ec2.elb
-import boto.beanstalk
+import boto3
 import re
-from boto.s3.connection import S3Connection
-from boto.s3.key import Key
 import os
 
 # List of all EIPs
 def _list_eips(region, filter):
     print "Connecting to ec2..."
-    conn = boto.ec2.connect_to_region(region)
-    all_eips = conn.get_all_addresses()
-    all_eips = [ip.public_ip for ip in all_eips if ip.public_ip not in filter]
+    client = boto3.client('ec2', region_name=region)
+    addresses_dict = client.describe_addresses()
+    all_eips = []
+    for eip_dict in addresses_dict['Addresses']:
+        if eip_dict['PublicIp'] not in filter:
+            all_eips.append(eip_dict['PublicIp'])
     return all_eips
 
 # List IP of load balancer
@@ -23,13 +22,13 @@ def _balancer_ip(lb_name):
 # Describe the active environment
 def _environment_descr(app_name, lb_name, region):
     print "Connecting to beanstalk..."
-    eb = boto.beanstalk.connect_to_region(region)
-    ret = eb.describe_environments(application_name=app_name)
-    ret = _decode_dict(ret)
+    eb = boto3.client('elasticbeanstalk', region_name=region)
+    ret = eb.describe_environments(ApplicationName=app_name)
+    #ret = _decode_dict(ret)
     active_env = None
     print "Looking up active environment..."
-    for env in ret['DescribeEnvironmentsResponse']['DescribeEnvironmentsResult']['Environments']:
-        if lb_name in env['EndpointURL'].lower():
+    for env in ret['Environments']:
+        if lb_name.lower() in env['EndpointURL'].lower():
             active_env = env
             break
     return active_env['EndpointURL']
@@ -37,19 +36,18 @@ def _environment_descr(app_name, lb_name, region):
 # Name of active load balancer
 def _active_balancer(dns_name, region):
     print "Connecting to route53..."
-    rconn = boto.route53.connect_to_region(region)
+    rconn = boto3.client('route53', region_name=region)
     if rconn == None:
         print "Failed to connect to route53, check region in config file"
         exit(-1)
-    zones = rconn.get_all_hosted_zones()
-    zones = _decode_dict(zones)['ListHostedZonesResponse']['HostedZones']
+    zones = rconn.list_hosted_zones()
     chosen_zone = None
     print "Looking up zone ID..."
 
     temp_dns_name = dns_name.split('.', 1)[-1]
     print "Temp dns_name is %s" % temp_dns_name
 
-    for zone in zones:
+    for zone in zones['HostedZones']:
         print "The zone is: %s, the dns_name is %s" % (zone['Name'][:-1], dns_name)
         
         if zone['Name'][:-1] == dns_name:
@@ -59,15 +57,15 @@ def _active_balancer(dns_name, region):
             break
 
         elif zone['Name'][:-1] == temp_dns_name:
-            print "Found zone that equals the dns name"
+            print "Found zone that equals the temp dns name"
             print zone['Name']
             chosen_zone = zone['Id'][12:]
 
     print "Retrieving record sets..."
-    rset = rconn.get_all_rrsets(chosen_zone, name=dns_name, type="A", maxitems=1)[0]
+    rset = rconn.list_resource_record_sets(HostedZoneId=chosen_zone, StartRecordName=dns_name, StartRecordType="A", MaxItems="1")['ResourceRecordSets'][0]
     print "Record set retrieved is : "
     print rset
-    lb_name = rset.alias_dns_name
+    lb_name = rset['AliasTarget']['DNSName']
     if 'dualstack' in lb_name:
         lb_name = re.search('dualstack.(.*)-[0-9]{9}', lb_name).group(1)
     else:
@@ -77,30 +75,21 @@ def _active_balancer(dns_name, region):
 # IPs of running instances
 def _instance_ip(lb_name, region):
     print "Connecting to ec2 elb..."  
-    elb = boto.ec2.elb.connect_to_region(region)
+    elb = boto3.client('elb', region_name=region)
     print "Connected!"
     print "Retrieving load balancers..."
-    all_lbs = elb.get_all_load_balancers()
+    all_lbs = elb.describe_load_balancers()['LoadBalancerDescriptions']
+    instance_ips = []
     for lb in all_lbs:
-        if lb_name in lb.name.lower():
-            lb_name = str(lb.name)
-            break
-    print "Retrieved!"
-    balancer = elb.get_all_load_balancers(lb_name)[0]
-    print "Connecting to ec2 to retrieve all instances..."
-    conn = boto.ec2.connect_to_region(region)
-    print "Getting instances..."
-    all_instances = conn.get_only_instances()
-    instances = []
-    print "Looping now..."
-    for inst in all_instances:
-        for b_inst in balancer.instances:
-            if b_inst.id == inst.id:
-                instances.append(
-                    inst.ip_address
-                )
-    print "Done"
-    return instances
+        if lb_name in lb['LoadBalancerName'].lower():
+            #lb_name = str(lb['LoadBalancerName'])
+            instances = [inst['InstanceId'] for inst in lb['Instances']]
+            ec2 = boto3.client('ec2', region_name=region)
+            reservations = ec2.describe_instances(InstanceIds=instances)['Reservations']
+            for r in reservations:
+                for instance in r['Instances']:
+                    instance_ips.append(instance['PublicIpAddress'])
+    return instance_ips
 
 def _get_file(bucket_name, s3_path, local_path):
     if os.path.isfile(local_path):
@@ -108,11 +97,21 @@ def _get_file(bucket_name, s3_path, local_path):
         os.remove(local_path)
         print "Done"
     print "Retrieving config file..."
-    conn = S3Connection()
-    bucket = conn.lookup(bucket_name)
-    key = Key(bucket, s3_path)
-    key.get_contents_to_filename(local_path)
+    s3 = boto3.resource('s3')
+    s3.meta.client.download_file(bucket_name, s3_path, local_path)
     print "Done"
+
+#Return prefixed record sets of a hosted zone ID 
+def _get_records_from_zone(zone_id, record_prefix):
+
+    r = boto3.client('route53')
+    res = r.list_resource_record_sets(HostedZoneId=zone_id, StartRecordName=record_prefix, StartRecordType="A")
+    entries = []
+    for x in res['ResourceRecordSets']:
+        if record_prefix.split('.')[0] in x['Name']:
+            entries.append(x['ResourceRecords'][0]['Value'])
+
+    return entries
 
 # Decode dict/list
 def _decode_dict(data):
