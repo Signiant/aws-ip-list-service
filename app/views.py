@@ -87,7 +87,7 @@ def handle_app(appname):
                     for item in config['R53']:
                         ret[item['Name']] = {}
                         ret[item['Name']]['all_ips'] = []
-                        ret[item['Name']]['all_ips'] = awslib._get_records_from_zone(item['HostedZoneId'], item['Prefix'])
+                        ret[item['Name']]['all_ips'] = awslib._get_records_from_zone(item['HostedZoneId'], item['Pattern'], item['Domain'])
                         print ret
                     return jsonify(**ret)
 

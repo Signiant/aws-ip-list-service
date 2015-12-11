@@ -102,10 +102,11 @@ def _get_file(bucket_name, s3_path, local_path):
     print "Done"
 
 #Return prefixed record sets of a hosted zone ID 
-def _get_records_from_zone(zone_id, record_prefix):
+def _get_records_from_zone(zone_id, record_prefix, domain):
 
     r = boto3.client('route53')
-    res = r.list_resource_record_sets(HostedZoneId=zone_id, StartRecordName=record_prefix, StartRecordType="A")
+    startname = record_prefix + "." + domain
+    res = r.list_resource_record_sets(HostedZoneId=zone_id, StartRecordName=startname, StartRecordType="A")
     entries = []
     for x in res['ResourceRecordSets']:
         if record_prefix.split('.')[0] in x['Name']:
