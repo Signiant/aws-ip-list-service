@@ -88,7 +88,6 @@ def handle_app(appname):
                         ret[item['Name']] = {}
                         ret[item['Name']]['all_ips'] = []
                         ret[item['Name']]['all_ips'] = awslib._get_records_from_zone(item['HostedZoneId'], item['Pattern'], item['Domain'])
-                        print ret
                     return jsonify(**ret)
 
                 dnsname = config['dnsname']
