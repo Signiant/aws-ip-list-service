@@ -49,7 +49,7 @@ def _active_balancer(dns_name, region):
 
     for zone in zones['HostedZones']:
         print "The zone is: %s, the dns_name is %s" % (zone['Name'][:-1], dns_name)
-        
+
         if zone['Name'][:-1] == dns_name:
             print "Found zone that equals the dns name"
             print zone['Name']
@@ -69,12 +69,12 @@ def _active_balancer(dns_name, region):
     if 'dualstack' in lb_name:
         lb_name = re.search('dualstack.(.*)-[0-9]{9}', lb_name).group(1)
     else:
-        lb_name = re.search('(.*?)-[0-9]{9}', lb_name).group(1)
+        lb_name = re.search('(.*?)-.[0-9]*', lb_name).group(1)
     return lb_name
-    
+
 # IPs of running instances
 def _instance_ip(lb_name, region):
-    print "Connecting to ec2 elb..."  
+    print "Connecting to ec2 elb..."
     elb = boto3.client('elb', region_name=region)
     print "Connected!"
     print "Retrieving load balancers..."
@@ -101,7 +101,7 @@ def _get_file(bucket_name, s3_path, local_path):
     s3.meta.client.download_file(bucket_name, s3_path, local_path)
     print "Done"
 
-#Return prefixed record sets of a hosted zone ID 
+#Return prefixed record sets of a hosted zone ID
 def _get_records_from_zone(zone_id, record_prefix, domain):
 
     r = boto3.client('route53')
