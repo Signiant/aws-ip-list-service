@@ -67,7 +67,7 @@ def _active_balancer(dns_name, region):
     print rset
     lb_name = rset['AliasTarget']['DNSName']
     if 'dualstack' in lb_name:
-        lb_name = re.search('dualstack.(.*)-[0-9]{9}', lb_name).group(1)
+        lb_name = re.search('dualstack.(.*)-.[0-9]*', lb_name).group(1)
     else:
         lb_name = re.search('(.*?)-.[0-9]*', lb_name).group(1)
     return lb_name
