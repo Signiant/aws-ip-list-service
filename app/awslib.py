@@ -83,12 +83,17 @@ def _instance_ip(lb_name, region):
     for lb in all_lbs:
         if lb_name in lb['LoadBalancerName'].lower():
             #lb_name = str(lb['LoadBalancerName'])
+            print "Processing instances for ELB %s" % lb['LoadBalancerName']
             instances = [inst['InstanceId'] for inst in lb['Instances']]
-            ec2 = boto3.client('ec2', region_name=region)
-            reservations = ec2.describe_instances(InstanceIds=instances)['Reservations']
-            for r in reservations:
-                for instance in r['Instances']:
-                    instance_ips.append(instance['PublicIpAddress'])
+            print "Instances discovered: %s" % str(instances)
+            
+            if instances:
+                ec2 = boto3.client('ec2', region_name=region)
+                reservations = ec2.describe_instances(InstanceIds=instances)['Reservations']
+                for r in reservations:
+                    for instance in r['Instances']:
+                        instance_ips.append(instance['PublicIpAddress'])
+
     return instance_ips
 
 def _get_file(bucket_name, s3_path, local_path):
