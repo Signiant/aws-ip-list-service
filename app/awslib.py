@@ -66,11 +66,17 @@ def _active_balancer(dns_name, region):
     print "Record set retrieved is : "
     print rset
     lb_name = rset['AliasTarget']['DNSName']
-    if 'dualstack' in lb_name:
-        lb_name = re.search('dualstack.(.*)-.[0-9]*', lb_name).group(1)
-    else:
-        lb_name = re.search('(.*?)-.[0-9]*', lb_name).group(1)
+
+    if lb_name.startswith("dualstack"):                                                                                                                                                   
+        lb_name = lb_name.split("dualstack.")[1]                                                                                                                                          
+                                                                                                                                                                                          
+    # Split on periods, take the first group (lbname dns), split on hyphens and take all but the end and rejoin with hyphens                                                              
+    lb_name = "-".join(lb_name.split(".")[0].split("-")[:-1])                                                                                                                             
+                                                                                                                                                                                          
+    print "Retrieved load-balancer: " + str(lb_name)
+
     return lb_name
+
 
 # IPs of running instances
 def _instance_ip(lb_name, region):
