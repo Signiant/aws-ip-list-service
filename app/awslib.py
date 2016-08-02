@@ -2,6 +2,7 @@ import socket
 import boto3
 import re
 import os
+import socket
 
 # List of all EIPs
 def _list_eips(region, filter):
@@ -113,17 +114,45 @@ def _get_file(bucket_name, s3_path, local_path):
     print "Done"
 
 #Return prefixed record sets of a hosted zone ID
-def _get_records_from_zone(zone_id, record_prefix, domain):
-
-    r = boto3.client('route53')
-    startname = record_prefix + "." + domain
-    res = r.list_resource_record_sets(HostedZoneId=zone_id, StartRecordName=startname, StartRecordType="A")
+def _get_records_from_zone(zone_id, record_prefixes, domain):
+    print "Enter get records from zone"
     entries = []
-    for x in res['ResourceRecordSets']:
-        if record_prefix.split('.')[0] in x['Name']:
-            entries.append(x['ResourceRecords'][0]['Value'])
+    r = boto3.client('route53')
+    #Kinda hacky to support both arrays and strings as a value
+    if not isinstance(record_prefixes, list):
+        record_prefixes = [record_prefixes]
+    print "record_prefixes: " + str(record_prefixes)
+    for prefix in record_prefixes:
+        startname = prefix + "." + domain
+        res = r.list_resource_record_sets(HostedZoneId=zone_id, StartRecordName=startname)
+        try:
+            for record in res['ResourceRecordSets']:
+                if prefix.split('.')[0] in record['Name']:
+                    entry = record['ResourceRecords'][0]['Value']
+                    #Check if it's not an IP address.. Since the way this is coded it's easier than checking the type (we're searching for an A record)
+                    if not re.match("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$",entry):
+                        try:
+                            for addr in [ str(i[4][0]) for i in socket.getaddrinfo(entry, 80) ]:
+                                if addr not in entries:
+                                    entries.append(addr)
+                        #Nothing we can do
+                        except Exception:
+                            import traceback
+                            print "Caught Exception while resolving DNS for IP: "
+                            traceback.print_exc()
+                            entry = None
+                    else:
+                        entries.append(entry)
+
+        except Exception:
+            import traceback
+            print "Caught Exception while looking up records: "
+            traceback.print_exc()
+            continue
 
     return entries
+
+
 
 # Decode dict/list
 def _decode_dict(data):
