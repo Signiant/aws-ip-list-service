@@ -68,12 +68,12 @@ def _active_balancer(dns_name, region):
     print rset
     lb_name = rset['AliasTarget']['DNSName']
 
-    if lb_name.startswith("dualstack"):                                                                                                                                                   
-        lb_name = lb_name.split("dualstack.")[1]                                                                                                                                          
-                                                                                                                                                                                          
-    # Split on periods, take the first group (lbname dns), split on hyphens and take all but the end and rejoin with hyphens                                                              
-    lb_name = "-".join(lb_name.split(".")[0].split("-")[:-1])                                                                                                                             
-                                                                                                                                                                                          
+    if lb_name.startswith("dualstack"):
+        lb_name = lb_name.split("dualstack.")[1]
+
+    # Split on periods, take the first group (lbname dns), split on hyphens and take all but the end and rejoin with hyphens
+    lb_name = "-".join(lb_name.split(".")[0].split("-")[:-1])
+
     print "Retrieved load-balancer: " + str(lb_name)
 
     return lb_name
@@ -93,7 +93,7 @@ def _instance_ip(lb_name, region):
             print "Processing instances for ELB %s" % lb['LoadBalancerName']
             instances = [inst['InstanceId'] for inst in lb['Instances']]
             print "Instances discovered: %s" % str(instances)
-            
+
             if instances:
                 ec2 = boto3.client('ec2', region_name=region)
                 reservations = ec2.describe_instances(InstanceIds=instances)['Reservations']
@@ -137,17 +137,11 @@ def _get_records_from_zone(zone_id, record_prefixes, domain):
                                     entries.append(addr)
                         #Nothing we can do
                         except Exception:
-                            import traceback
-                            print "Caught Exception while resolving DNS for IP: "
-                            traceback.print_exc()
-                            entry = None
+                            continue
                     else:
                         entries.append(entry)
 
         except Exception:
-            import traceback
-            print "Caught Exception while looking up records: "
-            traceback.print_exc()
             continue
 
     return entries

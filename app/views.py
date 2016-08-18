@@ -1,3 +1,4 @@
+import awslib
 from app import app
 from flask import render_template
 from flask import send_from_directory
@@ -5,9 +6,7 @@ import json
 from json import dumps
 from os.path import join
 from flask import make_response, request, redirect, url_for
-import awslib
-import os
-
+import os, time, pickle
 
 bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
 s3path = os.environ.get('IPLIST_CONFIG_PATH')
@@ -22,6 +21,17 @@ elif bucket_name == None:
 else:
     awslib._get_file(bucket_name, s3path, path)
 
+#####
+# Caching parameters
+#####
+cache_timeout_period_in_seconds = 300
+cache_root_directory = "/tmp/ip-range-cache"
+
+try:
+    os.makedirs(cache_root_directory)
+except:
+    pass
+
 @app.route('/')
 def handle_index():
     redir = None
@@ -29,13 +39,13 @@ def handle_index():
         proto = request.headers.get("X-Forwarded-Proto")
         if not proto == "https":
             redir = _check_ssl(request.url)
-    
+
     if not redir == None:
         return redir
 
     with open(path) as json_data:
         data = json.load(json_data)
-    
+
     return render_template("index.html", apps=[app['name'] for app in data['apps']])
 
 @app.route('/healthcheck')
@@ -44,12 +54,8 @@ def handle_healthcheck():
 
 @app.route('/<appname>')
 def handle_app(appname):
-    with open(path) as json_data:
-        data = json.load(json_data)
-
     verbose = False
     chosen_region = None
-    ret = {}
     query_string = request.query_string
 
     if not query_string == "":
@@ -59,99 +65,140 @@ def handle_app(appname):
                     verbose = True
             elif "region" in query.lower():
                 chosen_region = query[7:]
+    suffix = ".json"
 
     if verbose:
-        print request.url
-    redir = None
-    if nohttps == None:
-        proto = request.headers.get("X-Forwarded-Proto")
-        if not proto == "https":
-            redir = _check_ssl(request.url, verbose)
-    if not redir == None:
-        return redir
+        suffix = ".verbose" + suffix
 
-    for app in data['apps']:
-        if appname.lower() == app['name'].lower():
-            app_config = app['config']
+    if chosen_region:
+        suffix = "." + chosen_region + suffix
 
-            for config in app_config:
-                
-                if config.get('s3filepath'):
-                    datapath = config.get('localpath')
-                    awslib._get_file(bucket_name, config['s3filepath'], datapath)
-                    with open(datapath) as filedata:
-                        output = json.load(filedata)
-                    return jsonify(**output)
-                elif config.get('R53'):
-                    ret = {}
-                    for item in config['R53']:
-                        ret[item['Name']] = {}
-                        ret[item['Name']]['all_ips'] = []
-                        ret[item['Name']]['all_ips'] = awslib._get_records_from_zone(item['HostedZoneId'], item['Pattern'], item['Domain'])
-                    return jsonify(**ret)
+    app_cache_file = os.path.join(cache_root_directory,appname + suffix)
+    read_from_cache = True
+    try:
+        with open(app_cache_file, "r") as cache:
+            cache_time = float(cache.readline().strip())
+            current_time = time.time()
+            if (current_time - cache_time) > cache_timeout_period_in_seconds:
+                read_from_cache = False
+    except IOError:
+        read_from_cache = False
 
-                dnsname = config['dnsname']
-                bs_app = config['beanstalk_app_name']
-                region = config['region']
+    if read_from_cache:
+        print("Reading cached data for this request.")
+    else:
+        print("Cache is out of date. Refreshing for this request.")
 
-                if not chosen_region == None:
-                    if not region == chosen_region:
-                        continue
+    if read_from_cache is False:
+        try:
+            with open(path) as json_data:
+                data = json.load(json_data)
 
-                exclusions = config['exclusions']
-                eip_check = config.get('show_eip')
-                lb_check = config.get('show_lb_ip')
-                inst_check = config.get('show_inst_ip')
-                if ret.get(region) == None:
-                    ret[region] = {}
-                lb_name = awslib._active_balancer(dnsname, region)                
-                
-                if ret[region].get('all_ips') == None:
-                    ret[region]['all_ips'] = []
+            ret = {}
 
-                if not eip_check == None:
-                    eips = awslib._list_eips(region, filter=exclusions)
-                    if verbose:
-                        if ret[region].get('eips') == None:
-                            ret[region]['eips'] = eips
-                        else:
-                            ret[region]['eips'].extend(eips)
+            if verbose:
+                print request.url
+            redir = None
+            if nohttps == None:
+                proto = request.headers.get("X-Forwarded-Proto")
+                if not proto == "https":
+                    redir = _check_ssl(request.url, verbose)
+            if not redir == None:
+                return redir
 
-                    if eip_check:
-                        ret[region]['all_ips'].extend(eips)
+            for app in data['apps']:
+                if appname.lower() == app['name'].lower():
+                    app_config = app['config']
 
-                if not lb_check == None:
-                    lb_url = awslib._environment_descr(bs_app, lb_name, region)
-                    elb = awslib._balancer_ip(lb_url)
+                    for config in app_config:
 
-                    if verbose:
-                        if ret[region].get('elb') == None:
-                            ret[region]['elb'] = elb
-                        else:
-                            ret[region]['elb'].extend(elb)
+                        if config.get('s3filepath'):
+                            datapath = config.get('localpath')
+                            awslib._get_file(bucket_name, config['s3filepath'], datapath)
+                            with open(datapath) as filedata:
+                                output = json.load(filedata)
+                            break
+                        elif config.get('R53'):
+                            ret = {}
+                            for item in config['R53']:
+                                ret[item['Name']] = {}
+                                ret[item['Name']]['all_ips'] = []
+                                ret[item['Name']]['all_ips'] = awslib._get_records_from_zone(item['HostedZoneId'], item['Pattern'], item['Domain'])
+                            break
 
-                    if lb_check:
-                        ret[region]['all_ips'].extend(elb)
+                        dnsname = config['dnsname']
+                        bs_app = config['beanstalk_app_name']
+                        region = config['region']
 
-                if not inst_check == None:
-                    inst_ips = awslib._instance_ip(lb_name, region)
-                    if verbose:
-                        if ret[region].get('instance_ips') == None:
-                            ret[region]['instance_ips'] = inst_ips
-                        else:
-                            ret[region]['instance_ips'].extend(inst_ips)
+                        if not chosen_region == None:
+                            if not region == chosen_region:
+                                continue
 
-                    if inst_check:
-                        ret[region]['all_ips'].extend(inst_ips)
+                        exclusions = config['exclusions']
+                        eip_check = config.get('show_eip')
+                        lb_check = config.get('show_lb_ip')
+                        inst_check = config.get('show_inst_ip')
+                        if ret.get(region) == None:
+                            ret[region] = {}
+                        lb_name = awslib._active_balancer(dnsname, region)
 
-    if not ret:
-        return redirect(url_for('handle_index'), code=302)
-    else:    
-        return jsonify(**ret)
+                        if ret[region].get('all_ips') == None:
+                            ret[region]['all_ips'] = []
+
+                        if not eip_check == None:
+                            eips = awslib._list_eips(region, filter=exclusions)
+                            if verbose:
+                                if ret[region].get('eips') == None:
+                                    ret[region]['eips'] = eips
+                                else:
+                                    ret[region]['eips'].extend(eips)
+
+                            if eip_check:
+                                ret[region]['all_ips'].extend(eips)
+
+                        if not lb_check == None:
+                            lb_url = awslib._environment_descr(bs_app, lb_name, region)
+                            elb = awslib._balancer_ip(lb_url)
+
+                            if verbose:
+                                if ret[region].get('elb') == None:
+                                    ret[region]['elb'] = elb
+                                else:
+                                    ret[region]['elb'].extend(elb)
+
+                            if lb_check:
+                                ret[region]['all_ips'].extend(elb)
+
+                        if not inst_check == None:
+                            inst_ips = awslib._instance_ip(lb_name, region)
+                            if verbose:
+                                if ret[region].get('instance_ips') == None:
+                                    ret[region]['instance_ips'] = inst_ips
+                                else:
+                                    ret[region]['instance_ips'].extend(inst_ips)
+
+                            if inst_check:
+                                ret[region]['all_ips'].extend(inst_ips)
+
+            if not ret:
+                return redirect(url_for('handle_index'), code=302)
+            else:
+                _write_cache(app_cache_file,ret)
+        except:
+            import traceback
+            print "Error: Unable to load new information for app: " + str(appname)
+            traceback.print_exc()
+
+    with open(app_cache_file, "r") as cache:
+        cache_time = cache.readline()
+        line = cache.readline()
+        return jsonify(**eval(line))
+
 
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
     response = make_response(dumps(dict(**kwargs), indent=indent, sort_keys=sort_keys))
     response.headers['Content-Type'] = 'application/json; charset=utf-8'
@@ -166,3 +213,10 @@ def _check_ssl(url, verbose=False):
         return None
     else:
         return redirect("https" + url[4:], code=302)
+
+def _write_cache(app_cache_file,data):
+
+    with open(app_cache_file, "w+") as cache:
+        cache.write(str(time.time()))
+        cache.write("\n")
+        cache.write(str(data))
