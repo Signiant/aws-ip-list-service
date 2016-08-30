@@ -127,7 +127,7 @@ def _get_records_from_zone(zone_id, record_prefixes, domain):
         res = r.list_resource_record_sets(HostedZoneId=zone_id, StartRecordName=startname)
         try:
             for record in res['ResourceRecordSets']:
-                if prefix.split('.')[0] in record['Name']:
+                if re.match(prefix,record['Name']):
                     entry = record['ResourceRecords'][0]['Value']
                     #Check if it's not an IP address.. Since the way this is coded it's easier than checking the type (we're searching for an A record)
                     if not re.match("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$",entry):
