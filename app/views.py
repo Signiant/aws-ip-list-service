@@ -25,7 +25,7 @@ else:
 # Caching parameters
 #####
 cache_timeout_period_in_seconds = 300
-cache_root_directory = "/tmp/ip-range-cache"
+cache_root_directory = "/ip-range-cache"
 
 try:
     os.makedirs(cache_root_directory)
@@ -73,7 +73,7 @@ def handle_app(appname):
     if chosen_region:
         suffix = "." + chosen_region + suffix
 
-    app_cache_file = os.path.join(cache_root_directory,appname + suffix)
+    app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
     read_from_cache = True
     try:
         with open(app_cache_file, "r") as cache:
