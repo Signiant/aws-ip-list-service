@@ -99,8 +99,10 @@ def _instance_ip(lb_name, region):
                 reservations = ec2.describe_instances(InstanceIds=instances)['Reservations']
                 for r in reservations:
                     for instance in r['Instances']:
-                        instance_ips.append(instance['PublicIpAddress'])
-
+                        if 'PublicIpAddress' in instance:
+                            instance_ips.append(instance['PublicIpAddress'])
+                        else:
+                            print "The instance %s has no public IP" % str(instance['InstanceId'])
     return instance_ips
 
 def _get_file(bucket_name, s3_path, local_path):
