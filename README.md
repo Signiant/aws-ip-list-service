@@ -66,3 +66,9 @@ docker run -e IPLIST_CONFIG_BUCKET=S3-Bucket -e IPLIST_CONFIG_PATH="path/to/conf
 -e AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY -e AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY \
 -e PYTHONUNBUFFERED=1 -p 5000:5000 -d --name container-name
 ````
+
+Make sure to set add 
+```
+-e NOHTTPS=True
+```
+As one of the environment variable when testing locally. As it will not working locally.
