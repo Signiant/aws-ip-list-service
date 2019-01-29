@@ -7,6 +7,7 @@ from json import dumps
 from os.path import join
 from flask import make_response, request, redirect, url_for
 import os, time, pickle
+import traceback
 
 bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
 s3path = os.environ.get('IPLIST_CONFIG_PATH')
@@ -15,9 +16,9 @@ nohttps = os.environ.get('NOHTTPS')
 path = join('iplist_config', 'config.json')
 
 if s3path == None:
-    print "No Env Labeled IPLIST_CONFIG_PATH"
+    print ("No Env Labeled IPLIST_CONFIG_PATH")
 elif bucket_name == None:
-    print "No bucket name specified"
+    print ("No bucket name specified")
 else:
     awslib._get_file(bucket_name, s3path, path)
 
@@ -97,7 +98,7 @@ def handle_app(appname):
             ret = {}
 
             if verbose:
-                print request.url
+                print (request.url)
             redir = None
             if nohttps == None:
                 proto = request.headers.get("X-Forwarded-Proto")
@@ -107,7 +108,8 @@ def handle_app(appname):
                 return redir
 
             for app in data['apps']:
-                if appname.lower() == app['name'].lower():
+                # create url link for both name and alternative name for ip-range apps
+                if appname.lower() == app['name'].lower() or appname.lower() == app['altname'].lower():
                     app_config = app['config']
 
                     for config in app_config:
@@ -130,8 +132,9 @@ def handle_app(appname):
                         bs_app = config['beanstalk_app_name']
                         region = config['region']
 
-                        if not chosen_region == None:
-                            if not region == chosen_region:
+                        # only run next section if region equal chosen_region
+                        if chosen_region:
+                            if chosen_region != region:
                                 continue
 
                         exclusions = config['exclusions']
@@ -183,17 +186,29 @@ def handle_app(appname):
             if not ret:
                 return redirect(url_for('handle_index'), code=302)
             else:
+                #sort ip list in ret when it can
+                ret = ip_list_sort(ret)
                 _write_cache(app_cache_file,ret)
         except:
-            import traceback
-            print "Error: Unable to load new information for app: " + str(appname)
+            print ("Error: Unable to load new information for app: " + str(appname))
             traceback.print_exc()
 
     with open(app_cache_file, "r") as cache:
+        # read the first line as cache time
         cache_time = cache.readline()
         line = cache.readline()
         return jsonify(**eval(line))
 
+def ip_list_sort(ret):
+    """
+    sort ips in the nested dict list
+    :param ret:
+    :return:
+    """
+    for region in ret:
+        for ip_list in ret[region]:
+            ret[region][ip_list].sort()
+    return ret
 
 @app.route('/favicon.ico')
 def favicon():
