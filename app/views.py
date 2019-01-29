@@ -7,6 +7,7 @@ from json import dumps
 from os.path import join
 from flask import make_response, request, redirect, url_for
 import os, time, pickle
+import traceback
 
 bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
 s3path = os.environ.get('IPLIST_CONFIG_PATH')
@@ -185,9 +186,10 @@ def handle_app(appname):
             if not ret:
                 return redirect(url_for('handle_index'), code=302)
             else:
+                #sort ip list in ret when it can
+                ret = ip_list_sort(ret)
                 _write_cache(app_cache_file,ret)
         except:
-            import traceback
             print ("Error: Unable to load new information for app: " + str(appname))
             traceback.print_exc()
 
@@ -197,6 +199,16 @@ def handle_app(appname):
         line = cache.readline()
         return jsonify(**eval(line))
 
+def ip_list_sort(ret):
+    """
+    sort ips in the nested dict list
+    :param ret:
+    :return:
+    """
+    for region in ret:
+        for ip_list in ret[region]:
+            ret[region][ip_list].sort()
+    return ret
 
 @app.route('/favicon.ico')
 def favicon():
