@@ -109,7 +109,7 @@ def handle_app(appname):
 
             for app in data['apps']:
                 # create url link for both name and alternative name for ip-range apps
-                if appname.lower() == app['name'].lower() or appname.lower() == app['altname'].lower():
+                if appname.lower() == app['name'].lower() or appname.lower() == str(app.get('altname')).lower():
                     app_config = app['config']
 
                     for config in app_config:
