@@ -77,6 +77,7 @@ def handle_app(appname):
     app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
     read_from_cache = True
     try:
+        print(app_cache_file)
         with open(app_cache_file, "r") as cache:
             cache_time = float(cache.readline().strip())
             current_time = time.time()
@@ -86,7 +87,7 @@ def handle_app(appname):
         read_from_cache = False
 
     if read_from_cache:
-        print("Reading cached data for this request.")
+        print("Reading cached data for this request. here")
     else:
         print("Cache is out of date. Refreshing for this request.")
 
