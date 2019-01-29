@@ -51,7 +51,7 @@ def handle_index():
 
 @app.route('/healthcheck')
 def handle_healthcheck():
-    return "I'm still here."
+    return "I'm still here. test"
 
 @app.route('/<appname>')
 def handle_app(appname):
