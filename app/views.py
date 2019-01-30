@@ -48,7 +48,12 @@ def handle_index():
     with open(path) as json_data:
         data = json.load(json_data)
 
-    return render_template("index.html", apps=[app['name'] for app in data['apps']])
+    altapps=[]
+    for app in data['apps']:
+        if app.get('altname'):
+            altapps.append(app['altname'])
+
+    return render_template("index.html", apps=[app['name'] for app in data['apps']], altapps=altapps )
 
 
 @app.route('/healthcheck')

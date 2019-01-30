@@ -9,6 +9,10 @@
         {% for app in apps %}
             <li><a href="{{request.path}}{{app}}">{{app}}</a></li>
         {% endfor %}
+
+        {% for app in altapps %}
+            <li><a href="{{request.path}}{{app}}">{{app}}</a></li>
+        {% endfor %}
         </ul>
     </body>
 </html>
