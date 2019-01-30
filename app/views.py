@@ -48,6 +48,7 @@ def handle_index():
     with open(path) as json_data:
         data = json.load(json_data)
 
+    # creating altname list for to be deprecated url links
     altapps=[]
     for app in data['apps']:
         if app.get('altname'):
