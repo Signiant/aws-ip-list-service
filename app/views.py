@@ -59,7 +59,7 @@ def handle_index():
 
 @app.route('/healthcheck')
 def handle_healthcheck():
-    return "I'm still here. test1"
+    return "I'm still here."
 
 
 @app.route('/<appname>')
@@ -84,7 +84,7 @@ def handle_app(appname):
         suffix = "." + chosen_region + suffix
 
     app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
-    print(app_cache_file, "1")
+
     read_from_cache = True
     try:
         with open(app_cache_file, "r") as cache:
@@ -92,11 +92,9 @@ def handle_app(appname):
             current_time = time.time()
             if (current_time - cache_time) > cache_timeout_period_in_seconds:
                 read_from_cache = False
-        print(app_cache_file,"2")
     except IOError:
         read_from_cache = False
 
-    print(read_from_cache, "1")
     if read_from_cache:
         print("Reading cached data for this request.")
     else:
@@ -208,9 +206,7 @@ def handle_app(appname):
         # read the first line as cache time
         cache_time = cache.readline()
         line = cache.readline()
-        print(line)
-
-    return jsonify(**eval(line))
+        return jsonify(**eval(line))
 
 
 def ip_list_sort(ret):
