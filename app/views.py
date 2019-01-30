@@ -51,7 +51,7 @@ def handle_index():
 
 @app.route('/healthcheck')
 def handle_healthcheck():
-    return "I'm still here."
+    return "I'm still here. test"
 
 @app.route('/<appname>')
 def handle_app(appname):
@@ -86,11 +86,10 @@ def handle_app(appname):
         read_from_cache = False
 
     if read_from_cache:
-        print("Reading cached data for this request.")
+        print("Reading cached data for this request.cd .")
     else:
         print("Cache is out of date. Refreshing for this request.")
 
-    if read_from_cache is False:
         try:
             with open(path) as json_data:
                 data = json.load(json_data)
@@ -197,7 +196,9 @@ def handle_app(appname):
         # read the first line as cache time
         cache_time = cache.readline()
         line = cache.readline()
-        return jsonify(**eval(line))
+        print(line)
+
+    return jsonify(**eval(line))
 
 def ip_list_sort(ret):
     """
@@ -223,7 +224,7 @@ def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
 
 def _check_ssl(url, verbose=False):
     if verbose:
-        print "Current scheme: %s" % url[:5]
+        print ("Current scheme: %s" % url[:5])
     if url[:5] == "https":
         return None
     else:
