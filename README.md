@@ -23,7 +23,7 @@ The config uses the following format:
 
 **apps:** An array of apps .    
 **-name:** This is the name the browser will need to point to in order to access this app's IP list .     
-**-altname:** This is an optional name the brower can use to create a optional url webpage with same info (for backporting purpose) .   
+**[-altname:]** This is an *optional* variable that the user can use to create a optional url webpage with same info (for backward compatibility purpose) .   
 **-config:** An array of variables needed .   
 **--dnsname:** The domain name.   
 **--exclusions:** List of IPs to be excluded from the result .   
@@ -69,7 +69,7 @@ docker run -e IPLIST_CONFIG_BUCKET=S3-Bucket -e IPLIST_CONFIG_PATH="path/to/conf
 -e PYTHONUNBUFFERED=1 -p 5000:5000 -d --name container-name
 ````
 
-Make sure to set NOHTTPS to true. As one of the environment variable when testing locally. As it will not working locally otherwise.  
+Make sure to set NOHTTPS to true if there ais no local https support when testing locally. 
 ```
 -e NOHTTPS=True
 ```
