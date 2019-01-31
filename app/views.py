@@ -33,6 +33,7 @@ try:
 except:
     pass
 
+
 @app.route('/')
 def handle_index():
     redir = None
@@ -47,11 +48,19 @@ def handle_index():
     with open(path) as json_data:
         data = json.load(json_data)
 
-    return render_template("index.html", apps=[app['name'] for app in data['apps']])
+    # creating altname list for to be deprecated url links
+    altapps=[]
+    for app in data['apps']:
+        if app.get('altname'):
+            altapps.append(app['altname'])
+
+    return render_template("index.html", apps=[app['name'] for app in data['apps']], altapps=altapps )
+
 
 @app.route('/healthcheck')
 def handle_healthcheck():
     return "I'm still here. test"
+
 
 @app.route('/<appname>')
 def handle_app(appname):
@@ -75,6 +84,7 @@ def handle_app(appname):
         suffix = "." + chosen_region + suffix
 
     app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
+
     read_from_cache = True
     try:
         print(app_cache_file)
@@ -91,7 +101,6 @@ def handle_app(appname):
     else:
         print("Cache is out of date. Refreshing for this request.")
 
-    if read_from_cache is False:
         try:
             with open(path) as json_data:
                 data = json.load(json_data)
@@ -200,6 +209,7 @@ def handle_app(appname):
         line = cache.readline()
         return jsonify(**eval(line))
 
+
 def ip_list_sort(ret):
     """
     sort ips in the nested dict list
@@ -210,6 +220,7 @@ def ip_list_sort(ret):
         for ip_list in ret[region]:
             ret[region][ip_list].sort()
     return ret
+
 
 @app.route('/favicon.ico')
 def favicon():
@@ -224,7 +235,7 @@ def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
 
 def _check_ssl(url, verbose=False):
     if verbose:
-        print "Current scheme: %s" % url[:5]
+        print ("Current scheme: %s" % url[:5])
     if url[:5] == "https":
         return None
     else:

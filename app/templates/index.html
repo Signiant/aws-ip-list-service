@@ -1,12 +1,19 @@
 <html>
     <head>
         <title>IP List Service</title>
+        <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico')}}">
     </head>
     <body>
         <h1> Available Apps: </h1>
         <ul>
         {% for app in apps %}
             <li><a href="{{request.path}}{{app}}">{{app}}</a></li>
+        {% endfor %}
+
+        <!--Below URL Links will be deprecated in the near future. Please use above URLs instead. -->
+
+        {% for app in altapps %}
+            <li style="display:none;><a href="{{request.path}}{{app}}">{{app}}</a></li>
         {% endfor %}
         </ul>
     </body>
