@@ -48,13 +48,35 @@ def handle_index():
     with open(path) as json_data:
         data = json.load(json_data)
 
+    # create displayName list
+    displayNames=[]
+    for app in data['apps']:
+        if app.get('displayName'):
+            displayNames.append(app['displayName'])
+        else:
+            displayNames.append(app['name'])
+
+    app_data = []
+    for app in data['apps']:
+        app_info = {}
+        app_info['name'] = app['name']
+        app_info['displayName'] = app['name']
+        if app.get('displayName'):
+            app_info['displayName'] = app['displayName']
+        app_data.append(app_info)
+
     # creating altname list for to be deprecated url links
     altapps=[]
     for app in data['apps']:
         if app.get('altname'):
-            altapps.append(app['altname'])
+            app_info = {}
+            app_info['name'] = app['altname']
+            app_info['displayName'] = app['altname']
+            if app.get('displayName'):
+                app_info['displayName'] = app['displayName']
+            altapps.append(app_info)
 
-    return render_template("index.html", apps=[app['name'] for app in data['apps']], altapps=altapps )
+    return render_template("index.html", apps=app_data, altapps=altapps)
 
 
 @app.route('/healthcheck')
