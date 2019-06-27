@@ -1,4 +1,4 @@
-import awslib
+from . import awslib
 from app import app
 from flask import render_template
 from flask import send_from_directory
@@ -20,7 +20,7 @@ if s3path == None:
 elif bucket_name == None:
     print ("No bucket name specified")
 else:
-    awslib._get_file(bucket_name, s3path, path)
+    awslib.get_file(bucket_name, s3path, path)
 
 #####
 # Caching parameters
@@ -48,21 +48,13 @@ def handle_index():
     with open(path) as json_data:
         data = json.load(json_data)
 
-    # create displayName list
-    displayNames=[]
-    for app in data['apps']:
-        if app.get('displayName'):
-            displayNames.append(app['displayName'])
-        else:
-            displayNames.append(app['name'])
-
     app_data = []
     for app in data['apps']:
         app_info = {}
         app_info['name'] = app['name']
-        app_info['displayName'] = app['name']
-        if app.get('displayName'):
-            app_info['displayName'] = app['displayName']
+        app_info['additionalText'] = ''
+        if app.get('additionalText'):
+            app_info['additionalText'] = app['additionalText']
         app_data.append(app_info)
 
     # creating altname list for to be deprecated url links
@@ -71,9 +63,7 @@ def handle_index():
         if app.get('altname'):
             app_info = {}
             app_info['name'] = app['altname']
-            app_info['displayName'] = app['altname']
-            if app.get('displayName'):
-                app_info['displayName'] = app['displayName']
+            app_info['additionalText'] = ''
             altapps.append(app_info)
 
     return render_template("index.html", apps=app_data, altapps=altapps)
@@ -84,29 +74,7 @@ def handle_healthcheck():
     return "I'm still here. test"
 
 
-@app.route('/<appname>')
-def handle_app(appname):
-    verbose = False
-    chosen_region = None
-    query_string = request.query_string
-
-    if not query_string == "":
-        for query in query_string.split('&'):
-            if "verbose" in query.lower():
-                if query.endswith("1"):
-                    verbose = True
-            elif "region" in query.lower():
-                chosen_region = query[7:]
-    suffix = ".json"
-
-    if verbose:
-        suffix = ".verbose" + suffix
-
-    if chosen_region:
-        suffix = "." + chosen_region + suffix
-
-    app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
-
+def _read_from_cache(app_cache_file):
     read_from_cache = True
     try:
         print(app_cache_file)
@@ -117,9 +85,37 @@ def handle_app(appname):
                 read_from_cache = False
     except IOError:
         read_from_cache = False
+    return read_from_cache
 
-    if read_from_cache:
-        print("Reading cached data for this request. here")
+
+@app.route('/<appname>')
+def handle_app(appname, get_all_ips=False):
+    verbose = False
+    chosen_region = None
+    query_string = request.query_string
+
+    if not query_string == "":
+        for query in query_string.split(b'&'):
+            if b'verbose' in query.lower():
+                if query.endswith(b'1'):
+                    verbose = True
+            elif b'region' in query.lower():
+                chosen_region = query[7:].decode("utf-8")
+    suffix = ".json"
+
+    if verbose:
+        suffix = ".verbose" + suffix
+
+    if chosen_region:
+        suffix = "." + chosen_region + suffix
+
+    if get_all_ips:
+        suffix = '.all' + suffix
+
+    app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
+
+    if _read_from_cache(app_cache_file):
+        print("Reading cached data for this request.")
     else:
         print("Cache is out of date. Refreshing for this request.")
 
@@ -148,7 +144,7 @@ def handle_app(appname):
 
                         if config.get('s3filepath'):
                             datapath = config.get('localpath')
-                            awslib._get_file(bucket_name, config['s3filepath'], datapath)
+                            awslib.get_file(bucket_name, config['s3filepath'], datapath)
                             with open(datapath) as filedata:
                                 output = json.load(filedata)
                             break
@@ -157,11 +153,13 @@ def handle_app(appname):
                             for item in config['R53']:
                                 ret[item['Name']] = {}
                                 ret[item['Name']]['all_ips'] = []
-                                ret[item['Name']]['all_ips'] = awslib._get_records_from_zone(item['HostedZoneId'], item['Pattern'], item['Domain'])
+                                ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'], item['Domain'])
                             break
 
                         dnsname = config['dnsname']
-                        bs_app = config['beanstalk_app_name']
+                        # bs_app = None
+                        # if 'beanstalk_app_name' in config:
+                        #     bs_app = config['beanstalk_app_name']
                         region = config['region']
 
                         # only run next section if region equal chosen_region
@@ -175,45 +173,49 @@ def handle_app(appname):
                         inst_check = config.get('show_inst_ip')
                         if ret.get(region) == None:
                             ret[region] = {}
-                        lb_name = awslib._active_balancer(dnsname, region)
+                        lb_name = awslib.get_active_balancer(dnsname, region)
+
+                        if not lb_name:
+                            print('ERROR: Unable to determine LB name - will NOT be able to get instance IPs')
 
                         if ret[region].get('all_ips') == None:
                             ret[region]['all_ips'] = []
 
-                        if not eip_check == None:
-                            eips = awslib._list_eips(region, filter=exclusions)
-                            if verbose:
+                        if get_all_ips or not eip_check == None:
+                            eips = awslib.list_eips(region, filter=exclusions)
+                            # verbose only makes sense if we're not getting ALL EIPs
+                            if not get_all_ips and verbose:
                                 if ret[region].get('eips') == None:
                                     ret[region]['eips'] = eips
                                 else:
                                     ret[region]['eips'].extend(eips)
 
-                            if eip_check:
+                            if get_all_ips or eip_check:
                                 ret[region]['all_ips'].extend(eips)
 
-                        if not lb_check == None:
-                            lb_url = awslib._environment_descr(bs_app, lb_name, region)
-                            elb = awslib._balancer_ip(lb_url)
+                        if get_all_ips or not lb_check == None:
+                            elb = awslib.list_balancer_ips(dnsname)
 
-                            if verbose:
+                            if not get_all_ips and verbose:
                                 if ret[region].get('elb') == None:
                                     ret[region]['elb'] = elb
                                 else:
                                     ret[region]['elb'].extend(elb)
 
-                            if lb_check:
+                            if get_all_ips or lb_check:
                                 ret[region]['all_ips'].extend(elb)
 
-                        if not inst_check == None:
-                            inst_ips = awslib._instance_ip(lb_name, region)
-                            if verbose:
-                                if ret[region].get('instance_ips') == None:
-                                    ret[region]['instance_ips'] = inst_ips
-                                else:
-                                    ret[region]['instance_ips'].extend(inst_ips)
+                        if get_all_ips or not inst_check == None:
+                            if lb_name:
+                                inst_ips = awslib.list_instance_ips(lb_name, region)
+                                if not get_all_ips and verbose:
+                                    if ret[region].get('instance_ips') == None:
+                                        ret[region]['instance_ips'] = inst_ips
+                                    else:
+                                        ret[region]['instance_ips'].extend(inst_ips)
 
-                            if inst_check:
-                                ret[region]['all_ips'].extend(inst_ips)
+                                if get_all_ips or inst_check:
+                                    ret[region]['all_ips'].extend(inst_ips)
 
             if not ret:
                 return redirect(url_for('handle_index'), code=302)
@@ -230,6 +232,11 @@ def handle_app(appname):
         cache_time = cache.readline()
         line = cache.readline()
         return jsonify(**eval(line))
+
+
+@app.route('/<appname>/all')
+def handle_app_for_all_ips(appname):
+    return handle_app(appname, get_all_ips=True)
 
 
 def ip_list_sort(ret):

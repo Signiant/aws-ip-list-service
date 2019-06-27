@@ -1,5 +1,16 @@
 # aws-ip-list-service 
-Service to list IP addresses used by beanstalk services in AWS
+Service to list IP addresses behind URLS (Route 53 Records) in AWS.
+
+## Algorithm
+
+Query R53 for the given `dnsname` to determine the load balancer.
+Query the load balancer for the instances behind it. This should
+work for AWS Elastic Beanstalk applications, as well as any other
+AWS application fronted by an AWS elastic load balancer. Note that
+this solution handles the case of an NLB/ALB pair (Used for effectively
+supporting static IPs for application load balancers. See
+[here](https://aws.amazon.com/blogs/networking-and-content-delivery/using-static-ip-addresses-for-application-load-balancers/)
+for more details.)
 
 ## Config File
 The config uses the following format:
@@ -7,10 +18,10 @@ The config uses the following format:
 {
     "apps": [{
         "name": "app_name",
+        "additionalText": "this shows up beside the app name"
         "altname": "alt_name"
         "config": [{
             "dnsname": "example.com",
-            "beanstalk_app_name": "App_example",
             "region": "us-west-1",
             "exclusions": [],
             "show_eip": true,
@@ -22,14 +33,15 @@ The config uses the following format:
 ````
 
 **apps:** An array of apps .    
-**-name:** This is the name the browser will need to point to in order to access this app's IP list .     
-**[-altname:]** This is an *optional* variable that the user can use to create a optional url webpage with same info (for backward compatibility purpose) .   
-**-config:** An array of variables needed .   
-**--dnsname:** The domain name.   
-**--exclusions:** List of IPs to be excluded from the result .   
-**--show_eip:** Whether or not to show the list of Elastic IPs associated with your account .   
-**--show_lb_ip:** Whether or not to show the IPs associated with the load balancer .   
-**--show_inst_up:** Whether or not to show the IPs of the currently running instances .   
+**name:** This is the name the browser will need to point to in order to access this app's IP list .
+**[altname:]** This is an *optional* variable that the user can use to create a optional url webpage with same info (for backward compatibility purpose) .
+**[additionalText:]** This is an *optional* variable that the user can use to add additional text beside the app name.
+**config:** An array of variables needed .
+**dnsname:** The domain name.
+**exclusions:** List of IPs to be excluded from the result .
+**show_eip:** Whether or not to show the list of Elastic IPs associated with your account .
+**show_lb_ip:** Whether or not to show the IPs associated with the load balancer .
+**show_inst_up:** Whether or not to show the IPs of the currently running instances .
 
 An example URL would be: localhost:5000/app .   
 The URL can take up to 2 query strings, verbose and region.    

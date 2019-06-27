@@ -7,13 +7,13 @@
         <h1> Available Apps: </h1>
         <ul>
         {% for app in apps %}
-            <li><a href="{{request.path}}{{app.name}}">{{app.displayName}}</a></li>
+            <li><a href="{{request.path}}{{app.name}}">{{app.name}}</a>{% if app.additionalText != null %} {{app.additionalText}}{% endif %}</li>
         {% endfor %}
 
         <!--Below URL Links will be deprecated in the near future. Please use above URLs instead. -->
 
         {% for app in altapps %}
-            <li style="display:none;><a href="{{request.path}}{{app.name}}">{{app.displayName}}</a></li>
+            <li style="display:none;><a href="{{request.path}}{{app.name}}">{{app.name}}</a></li>
         {% endfor %}
         </ul>
     </body>
