@@ -89,7 +89,7 @@ def _read_from_cache(app_cache_file):
 
 
 @app.route('/<appname>')
-def handle_app(appname, get_all_ips=False):
+def handle_app(appname):
     verbose = False
     chosen_region = None
     query_string = request.query_string
@@ -108,9 +108,6 @@ def handle_app(appname, get_all_ips=False):
 
     if chosen_region:
         suffix = "." + chosen_region + suffix
-
-    if get_all_ips:
-        suffix = '.all' + suffix
 
     app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
 
@@ -181,40 +178,40 @@ def handle_app(appname, get_all_ips=False):
                         if ret[region].get('all_ips') == None:
                             ret[region]['all_ips'] = []
 
-                        if get_all_ips or not eip_check == None:
+                        if not eip_check == None:
                             eips = awslib.list_eips(region, filter=exclusions)
                             # verbose only makes sense if we're not getting ALL EIPs
-                            if not get_all_ips and verbose:
+                            if verbose:
                                 if ret[region].get('eips') == None:
                                     ret[region]['eips'] = eips
                                 else:
                                     ret[region]['eips'].extend(eips)
 
-                            if get_all_ips or eip_check:
+                            if eip_check:
                                 ret[region]['all_ips'].extend(eips)
 
-                        if get_all_ips or not lb_check == None:
+                        if not lb_check == None:
                             elb = awslib.list_balancer_ips(dnsname)
 
-                            if not get_all_ips and verbose:
+                            if verbose:
                                 if ret[region].get('elb') == None:
                                     ret[region]['elb'] = elb
                                 else:
                                     ret[region]['elb'].extend(elb)
 
-                            if get_all_ips or lb_check:
+                            if lb_check:
                                 ret[region]['all_ips'].extend(elb)
 
-                        if get_all_ips or not inst_check == None:
+                        if not inst_check == None:
                             if lb_name:
                                 inst_ips = awslib.list_instance_ips(lb_name, region)
-                                if not get_all_ips and verbose:
+                                if verbose:
                                     if ret[region].get('instance_ips') == None:
                                         ret[region]['instance_ips'] = inst_ips
                                     else:
                                         ret[region]['instance_ips'].extend(inst_ips)
 
-                                if get_all_ips or inst_check:
+                                if inst_check:
                                     ret[region]['all_ips'].extend(inst_ips)
 
             if not ret:
@@ -232,11 +229,6 @@ def handle_app(appname, get_all_ips=False):
         cache_time = cache.readline()
         line = cache.readline()
         return jsonify(**eval(line))
-
-
-@app.route('/<appname>/all')
-def handle_app_for_all_ips(appname):
-    return handle_app(appname, get_all_ips=True)
 
 
 def ip_list_sort(ret):
