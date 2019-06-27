@@ -239,6 +239,8 @@ def ip_list_sort(ret):
     """
     for region in ret:
         for ip_list in ret[region]:
+            # Remove any duplicates
+            ret[region][ip_list] = list(set(ret[region][ip_list]))
             ret[region][ip_list].sort()
     return ret
 
@@ -263,7 +265,6 @@ def _check_ssl(url, verbose=False):
         return redirect("https" + url[4:], code=302)
 
 def _write_cache(app_cache_file,data):
-
     with open(app_cache_file, "w+") as cache:
         cache.write(str(time.time()))
         cache.write("\n")

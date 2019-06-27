@@ -163,7 +163,7 @@ def _get_instances_public_ip(ec2_client, instances):
                 instance_ips.append(instance['PublicIpAddress'])
             else:
                 print("The instance %s has no public IP" % str(instance['InstanceId']))
-    return instance_ips
+    return list(set(instance_ips))
 
 
 # IPs of running instances
