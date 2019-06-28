@@ -164,6 +164,9 @@ def handle_app(appname):
                             if chosen_region != region:
                                 continue
 
+                        inclusions = None
+                        if config.get('inclusions') != None:
+                            inclusions = config['inclusions']
                         exclusions = config['exclusions']
                         eip_check = config.get('show_eip')
                         lb_check = config.get('show_lb_ip')
@@ -213,6 +216,24 @@ def handle_app(appname):
 
                                 if inst_check:
                                     ret[region]['all_ips'].extend(inst_ips)
+
+                        if inclusions:
+                            if 'dns_list' in inclusions:
+                                for dns in inclusions['dns_list']:
+                                    dns_ips = awslib.list_balancer_ips(dns)
+                                    if verbose:
+                                        if ret[region].get('inclusions') == None:
+                                            ret[region]['inclusions'] = dns_ips
+                                        else:
+                                            ret[region]['inclusions'].extend(dns_ips)
+                                    ret[region]['all_ips'].extend(dns_ips)
+                            if 'ip_list' in inclusions:
+                                if verbose:
+                                    if ret[region].get('inclusions') == None:
+                                        ret[region]['inclusions'] = inclusions['ip_list']
+                                    else:
+                                        ret[region]['inclusions'].extend(inclusions['ip_list'])
+                                ret[region]['all_ips'].extend(inclusions['ip_list'])
 
             if not ret:
                 return redirect(url_for('handle_index'), code=302)

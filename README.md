@@ -24,6 +24,10 @@ The config uses the following format:
             "dnsname": "example.com",
             "region": "us-west-1",
             "exclusions": [],
+            "inclusions": {
+              "dnsname": "example-2.com",
+              "ip_list": []
+            }
             "show_eip": true,
             "show_lb_ip": true,
             "show_inst_ip": true
@@ -32,16 +36,19 @@ The config uses the following format:
 }
 ````
 
-**apps:** An array of apps .    
-**name:** This is the name the browser will need to point to in order to access this app's IP list .
-**[altname:]** This is an *optional* variable that the user can use to create a optional url webpage with same info (for backward compatibility purpose) .
-**[additionalText:]** This is an *optional* variable that the user can use to add additional text beside the app name.
-**config:** An array of variables needed .
-**dnsname:** The domain name.
-**exclusions:** List of IPs to be excluded from the result .
-**show_eip:** Whether or not to show the list of Elastic IPs associated with your account .
-**show_lb_ip:** Whether or not to show the IPs associated with the load balancer .
-**show_inst_up:** Whether or not to show the IPs of the currently running instances .
+**apps:** An array of apps.   
+**name:** This is the name the browser will need to point to in order to access this app's IP list.   
+**[altname:]** This is an *optional* variable that the user can use to create a optional url webpage with same info (for backward compatibility purpose).   
+**[additionalText:]** This is an *optional* variable that the user can use to add additional text beside the app name.   
+**config:** An array of variables needed.   
+**dnsname:** The domain name.   
+**exclusions:** List of IPs to be excluded from the result.   
+**[inclusions]:** This is an optional dictionary with elements to query for IPs.   
+**[dnsname]:** This is an optional variable that the user can use to specify a domain to query for IPs.   
+**[ip_list]:** This is an optional list of IPs to include.   
+**show_eip:** Whether or not to show the list of Elastic IPs associated with your account.   
+**show_lb_ip:** Whether or not to show the IPs associated with the load balancer.   
+**show_inst_up:** Whether or not to show the IPs of the currently running instances.   
 
 An example URL would be: localhost:5000/app .   
 The URL can take up to 2 query strings, verbose and region.    
