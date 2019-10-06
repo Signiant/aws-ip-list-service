@@ -3,6 +3,7 @@ from app import app
 from flask import render_template
 from flask import send_from_directory
 import json
+import yaml
 from json import dumps
 from os.path import join
 from flask import make_response, request, redirect, url_for
@@ -13,7 +14,7 @@ bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
 s3path = os.environ.get('IPLIST_CONFIG_PATH')
 nohttps = os.environ.get('NOHTTPS')
 
-path = join('iplist_config', 'config.json')
+path = join('iplist_config', 'config')
 
 if s3path == None:
     print ("No Env Labeled IPLIST_CONFIG_PATH")
@@ -45,8 +46,9 @@ def handle_index():
     if not redir == None:
         return redir
 
-    with open(path) as json_data:
-        data = json.load(json_data)
+    with open(path) as config_data:
+        # This should handle json or yaml
+        data = yaml.safe_load(config_data)
 
     app_data = []
     for app in data['apps']:
@@ -117,8 +119,9 @@ def handle_app(appname):
         print("Cache is out of date. Refreshing for this request.")
 
         try:
-            with open(path) as json_data:
-                data = json.load(json_data)
+            with open(path) as config_data:
+                # This should handle json or yaml
+                data = yaml.safe_load(config_data)
 
             ret = {}
 
