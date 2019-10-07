@@ -7,7 +7,7 @@ import yaml
 from json import dumps
 from os.path import join
 from flask import make_response, request, redirect, url_for
-import os, time, pickle
+import os, time
 import traceback
 
 bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
@@ -153,7 +153,7 @@ def handle_app(appname):
                             for item in config['R53']:
                                 ret[item['Name']] = {}
                                 ret[item['Name']]['all_ips'] = []
-                                ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'], item['Domain'])
+                                ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
                             break
 
                         dnsname = config['dnsname']
