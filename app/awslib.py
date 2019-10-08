@@ -237,8 +237,40 @@ def get_file(bucket_name, s3_path, local_path):
     return result
 
 
+
+def get_all_records(r53_client, zone_id, start_record_name=None, start_record_type=None, start_record_identifier=None):
+    result = []
+    query_result = None
+    if start_record_identifier:
+        query_result = r53_client.list_resource_record_sets(HostedZoneId=zone_id,
+                                                            StartRecordName=start_record_name,
+                                                            StartRecordType=start_record_type,
+                                                            StartRecordIdentifier=start_record_identifier)
+    else:
+        if start_record_name:
+            query_result = r53_client.list_resource_record_sets(HostedZoneId=zone_id,
+                                                                StartRecordName=start_record_name,
+                                                                StartRecordType=start_record_type)
+        else:
+            query_result = r53_client.list_resource_record_sets(HostedZoneId=zone_id)
+    if query_result:
+        if 'IsTruncated' in query_result and query_result['IsTruncated']:
+            # print('Found %s records' % query_result['MaxItems'])
+            s_r_n = query_result['NextRecordName']
+            s_r_t = query_result['NextRecordType']
+            s_r_i = None
+            if 'NextRecordIdentifier' in query_result:
+                s_r_i = query_result['NextRecordIdentifier']
+            result.extend(query_result['ResourceRecordSets'])
+            result.extend(get_all_records(r53_client, zone_id, s_r_n, s_r_t, s_r_i))
+        else:
+            # print('Found %s records' % query_result['MaxItems'])
+            result.extend(query_result['ResourceRecordSets'])
+    return result
+
+
 # Return prefixed record sets of a hosted zone ID
-def get_records_from_zone(zone_id, record_prefixes, domain):
+def get_records_from_zone(zone_id, record_prefixes):
     print ("Enter get records from zone")
     entries = []
     r = boto3.client('route53')
@@ -247,25 +279,27 @@ def get_records_from_zone(zone_id, record_prefixes, domain):
         if not isinstance(record_prefixes, list):
             record_prefixes = [record_prefixes]
         print ("record_prefixes: " + str(record_prefixes))
-        for prefix in record_prefixes:
-            startname = prefix + "." + domain
-            res = r.list_resource_record_sets(HostedZoneId=zone_id, StartRecordName=startname)
-            try:
-                for record in res['ResourceRecordSets']:
+        # Get all records:
+        resource_record_sets = get_all_records(r, zone_id)
+        print('Found %s resource records for zone %s' % (str(len(resource_record_sets)), zone_id))
+        for record in resource_record_sets:
+            for prefix in record_prefixes:
+                try:
                     if re.match(prefix,record['Name']):
-                        entry = record['ResourceRecords'][0]['Value']
-                        #Check if it's not an IP address.. Since the way this is coded it's easier than checking the type (we're searching for an A record)
-                        if not re.match("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$",entry):
-                            try:
-                                for addr in [ str(i[4][0]) for i in socket.getaddrinfo(entry, 80) ]:
-                                    if addr not in entries:
-                                        entries.append(addr)
-                            #Nothing we can do
-                            except Exception:
-                                continue
-                        else:
-                            entries.append(entry)
-
-            except Exception:
-                continue
+                        if 'ResourceRecords' in record:
+                            entry = record['ResourceRecords'][0]['Value']
+                            #Check if it's not an IP address.. Since the way this is coded it's easier than checking the type (we're searching for an A record)
+                            if not re.match("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$",entry):
+                                try:
+                                    for addr in [ str(i[4][0]) for i in socket.getaddrinfo(entry, 80) ]:
+                                        if addr not in entries:
+                                            entries.append(addr)
+                                #Nothing we can do
+                                except Exception:
+                                    continue
+                            else:
+                                entries.append(entry)
+                except Exception:
+                    print('Exception trying to match records')
+                    continue
     return entries
