@@ -11,7 +11,8 @@ def list_eips(region, filter):
     print ("Connecting to ec2...")
     client = boto3.client('ec2', region_name=region)
     if client:
-        print("Connected!")
+        # print("Connected!")
+        print("Getting all EIPs in region %s" % region)
         addresses_dict = client.describe_addresses()
         for eip_dict in addresses_dict['Addresses']:
             if eip_dict['PublicIp'] not in filter:
@@ -32,7 +33,7 @@ def get_active_balancer(dns_name, region):
     print ("Connecting to route53...")
     rconn = boto3.client('route53', region_name=region)
     if rconn:
-        print("Connected!")
+        # print("Connected!")
         zones = rconn.list_hosted_zones()
         chosen_zone = None
         print ("Looking up zone ID...")
@@ -100,7 +101,7 @@ def _get_v2_lbs(elb_client, next_marker=None):
 
     if 'NextMarker' in query_result:
         result.extend(query_result['LoadBalancers'])
-        result.extend(_get_v1_lbs(elb_client, next_marker=query_result['NextMarker']))
+        result.extend(_get_v2_lbs(elb_client, next_marker=query_result['NextMarker']))
     else:
         result.extend(query_result['LoadBalancers'])
     return result
@@ -169,37 +170,40 @@ def _get_instances_public_ip(ec2_client, instances):
 
 # IPs of running instances
 def list_instance_ips(lb_name, region):
-    print ("Getting IPs for instances behind load balancer %s..." % lb_name)
+    print ("Looking for instances behind load balancer %s..." % lb_name)
     instance_ips = []
     lb_found = False
     print ("Connecting to ec2 elb v1...")
     elbv1 = boto3.client('elb', region_name=region)
     if elbv1:
-        print ("Connected!")
+        # print ("Connected!")
         print ("Retrieving classic load balancers...")
         v1_lbs = _get_v1_lbs(elbv1, next_marker=None)
         ec2_client = boto3.client('ec2', region_name=region)
         if ec2_client:
             for lb in v1_lbs:
                 if lb_name in lb['LoadBalancerName'].lower():
-                    lb_found = True
+                    print("Found the load balancer")
                     print ("Processing instances for ELB %s" % lb['LoadBalancerName'])
                     instances = [inst['InstanceId'] for inst in lb['Instances']]
                     print ("Instances discovered: %s" % str(instances))
                     if instances:
                         instance_ips.extend(_get_instances_public_ip(ec2_client, instances))
+                    lb_found = True
+                    break
             # Only look at v2 load balancers if we haven't already found the load balancer above
             if not lb_found:
                 print("Didn't find the load balancer in the list of classic load balancers")
                 print ("Connecting to ec2 elb v2...")
                 elbv2 = boto3.client('elbv2', region_name=region)
                 if elbv2:
-                    print ("Connected!")
+                    # print ("Connected!")
                     print ("Retrieving V2 load balancers...")
                     v2_lbs = _get_v2_lbs(elbv2, next_marker=None)
                     for lb in v2_lbs:
                         if lb_name in lb['LoadBalancerName'].lower():
-                            print ("Processing target groups for ELB %s" % lb['LoadBalancerName'])
+                            print("Found the load balancer")
+                            print ("Processing target groups for %s" % lb['LoadBalancerName'])
                             lb_arn = lb['LoadBalancerArn']
                             # Get the target groups for this load balancer
                             response = elbv2.describe_target_groups(LoadBalancerArn=lb_arn)
@@ -213,6 +217,10 @@ def list_instance_ips(lb_name, region):
                                     instances = _get_instances_for_target_group(elbv2, tg_arn, target_type, region)
                                     if instances:
                                         instance_ips.extend(_get_instances_public_ip(ec2_client, instances))
+                            lb_found = True
+                            break
+                    if not lb_found:
+                        print("Didn't find the load balancer in the list of application/network load balancers")
                 else:
                     print("ERROR: Failed to connect to ELBV2")
         else:
