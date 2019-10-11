@@ -156,10 +156,6 @@ def handle_app(appname):
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
                             break
 
-                        dnsname = config['dnsname']
-                        # bs_app = None
-                        # if 'beanstalk_app_name' in config:
-                        #     bs_app = config['beanstalk_app_name']
                         region = config['region']
 
                         # only run next section if region equal chosen_region
@@ -167,28 +163,23 @@ def handle_app(appname):
                             if chosen_region != region:
                                 continue
 
-                        inclusions = None
-                        if config.get('inclusions') != None:
-                            inclusions = config['inclusions']
-                        exclusions = config['exclusions']
+                        dnsname = config.get('dnsname')
+                        inclusions = config.get('inclusions')
+                        exclusions = config.get('exclusions')
                         eip_check = config.get('show_eip')
                         lb_check = config.get('show_lb_ip')
                         inst_check = config.get('show_inst_ip')
-                        if ret.get(region) == None:
+                        if not ret.get(region):
                             ret[region] = {}
-                        lb_name = awslib.get_active_balancer(dnsname, region)
 
-                        if not lb_name:
-                            print('ERROR: Unable to determine LB name - will NOT be able to get instance IPs')
-
-                        if ret[region].get('all_ips') == None:
+                        if not ret[region].get('all_ips'):
                             ret[region]['all_ips'] = []
 
-                        if not eip_check == None:
+                        if eip_check:
                             eips = awslib.list_eips(region, filter=exclusions)
                             # verbose only makes sense if we're not getting ALL EIPs
                             if verbose:
-                                if ret[region].get('eips') == None:
+                                if not ret[region].get('eips'):
                                     ret[region]['eips'] = eips
                                 else:
                                     ret[region]['eips'].extend(eips)
@@ -196,11 +187,11 @@ def handle_app(appname):
                             if eip_check:
                                 ret[region]['all_ips'].extend(eips)
 
-                        if not lb_check == None:
+                        if lb_check:
                             elb = awslib.list_balancer_ips(dnsname)
 
                             if verbose:
-                                if ret[region].get('elb') == None:
+                                if not ret[region].get('elb'):
                                     ret[region]['elb'] = elb
                                 else:
                                     ret[region]['elb'].extend(elb)
@@ -208,33 +199,41 @@ def handle_app(appname):
                             if lb_check:
                                 ret[region]['all_ips'].extend(elb)
 
-                        if not inst_check == None:
-                            if lb_name:
-                                inst_ips = awslib.list_instance_ips(lb_name, region)
-                                if verbose:
-                                    if ret[region].get('instance_ips') == None:
-                                        ret[region]['instance_ips'] = inst_ips
-                                    else:
-                                        ret[region]['instance_ips'].extend(inst_ips)
+                        if inst_check:
+                            lb_names = config.get('lb_names')
+                            lb_name = None
+                            if not lb_names:
+                                lb_name = awslib.get_active_balancer(dnsname, region)
 
-                                if inst_check:
-                                    ret[region]['all_ips'].extend(inst_ips)
+                            if not lb_name and not lb_names:
+                                print('ERROR: Unable to determine LB name(s) - cannot get instance IPs')
                             else:
-                                print('Asked to get instances behind load balancer, but cannot determine LB name')
+                                if not lb_names:
+                                    lb_names = [lb_name]
+                                for lb in lb_names:
+                                    inst_ips = awslib.list_instance_ips(lb.lower(), region)
+                                    if verbose:
+                                        if not ret[region].get('instance_ips'):
+                                            ret[region]['instance_ips'] = inst_ips
+                                        else:
+                                            ret[region]['instance_ips'].extend(inst_ips)
+
+                                    if inst_check:
+                                        ret[region]['all_ips'].extend(inst_ips)
 
                         if inclusions:
                             if 'dns_list' in inclusions:
                                 for dns in inclusions['dns_list']:
                                     dns_ips = awslib.list_balancer_ips(dns)
                                     if verbose:
-                                        if ret[region].get('inclusions') == None:
+                                        if not ret[region].get('inclusions'):
                                             ret[region]['inclusions'] = dns_ips
                                         else:
                                             ret[region]['inclusions'].extend(dns_ips)
                                     ret[region]['all_ips'].extend(dns_ips)
                             if 'ip_list' in inclusions:
                                 if verbose:
-                                    if ret[region].get('inclusions') == None:
+                                    if not ret[region].get('inclusions'):
                                         ret[region]['inclusions'] = inclusions['ip_list']
                                     else:
                                         ret[region]['inclusions'].extend(inclusions['ip_list'])
