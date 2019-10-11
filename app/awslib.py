@@ -56,15 +56,16 @@ def get_active_balancer(dns_name, region):
             rset = rconn.list_resource_record_sets(HostedZoneId=chosen_zone, StartRecordName=dns_name, StartRecordType="A", MaxItems="1")['ResourceRecordSets'][0]
             print ("Record set retrieved is : ")
             print (rset)
-            lb_name = rset['AliasTarget']['DNSName']
+            if 'AliasTarget' in rset:
+                lb_name = rset['AliasTarget']['DNSName']
 
-            if lb_name.startswith("dualstack"):
-                lb_name = lb_name.split("dualstack.")[1]
+                if lb_name.startswith("dualstack"):
+                    lb_name = lb_name.split("dualstack.")[1]
 
-            # Split on periods, take the first group (lbname dns), split on hyphens and take all but the end and rejoin with hyphens
-            lb_name = "-".join(lb_name.split(".")[0].split("-")[:-1])
+                # Split on periods, take the first group (lbname dns), split on hyphens and take all but the end and rejoin with hyphens
+                lb_name = "-".join(lb_name.split(".")[0].split("-")[:-1])
 
-            print ("Retrieved load-balancer: " + str(lb_name))
+                print ("Retrieved load-balancer: " + str(lb_name))
     else:
         print("ERROR: Failed to connect to R53")
 

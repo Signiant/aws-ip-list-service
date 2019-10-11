@@ -219,6 +219,8 @@ def handle_app(appname):
 
                                 if inst_check:
                                     ret[region]['all_ips'].extend(inst_ips)
+                            else:
+                                print('Asked to get instances behind load balancer, but cannot determine LB name')
 
                         if inclusions:
                             if 'dns_list' in inclusions:
