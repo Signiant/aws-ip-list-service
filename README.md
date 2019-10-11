@@ -17,6 +17,7 @@ The config uses the following format (JSON also supported):
 ````
 apps:
   - name: app_name
+    hidden: true
     additionalText: this shows up beside the app name
     altname: alt_name
     config:
@@ -34,9 +35,10 @@ apps:
 ````
 
 **apps:** An array of apps.   
-**name:** This is the name the browser will need to point to in order to access this app's IP list.   
-**[altname:]** This is an *optional* variable that the user can use to create a optional url webpage with same info (for backward compatibility purpose).   
-**[additionalText:]** This is an *optional* variable that the user can use to add additional text beside the app name.   
+**name:** This is the name the browser will need to point to in order to access this app's IP list.
+**[hidden:]** This is an *optional* parameter the user can specify to create a hidden link.
+**[altname:]** This is an *optional* parameter that the user can use to create a optional url webpage with same info (for backward compatibility purpose).
+**[additionalText:]** This is an *optional* parameter that the user can use to add additional text beside the app name.
 **config:** An array of variables needed.   
 **dnsname:** The domain name.   
 **exclusions:** List of IPs to be excluded from the result.   
