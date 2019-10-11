@@ -51,24 +51,32 @@ def handle_index():
         data = yaml.safe_load(config_data)
 
     app_data = []
+    hidden_apps = []
+    alt_apps = []
     for app in data['apps']:
-        app_info = {}
-        app_info['name'] = app['name']
-        app_info['additionalText'] = ''
-        if app.get('additionalText'):
-            app_info['additionalText'] = app['additionalText']
-        app_data.append(app_info)
-
-    # creating altname list for to be deprecated url links
-    altapps=[]
-    for app in data['apps']:
+        # altname list for deprecated url links
         if app.get('altname'):
             app_info = {}
             app_info['name'] = app['altname']
             app_info['additionalText'] = ''
-            altapps.append(app_info)
+            alt_apps.append(app_info)
+        if app.get('hidden'):
+            print('Found hidden app: %s' % app['name'])
+            app_info = {}
+            app_info['name'] = app['name']
+            app_info['additionalText'] = ''
+            if app.get('additionalText'):
+                app_info['additionalText'] = app['additionalText']
+            hidden_apps.append(app_info)
+        else:
+            app_info = {}
+            app_info['name'] = app['name']
+            app_info['additionalText'] = ''
+            if app.get('additionalText'):
+                app_info['additionalText'] = app['additionalText']
+            app_data.append(app_info)
 
-    return render_template("index.html", apps=app_data, altapps=altapps)
+    return render_template("index.html", apps=app_data, altapps=alt_apps, hidden=hidden_apps)
 
 
 @app.route('/healthcheck')

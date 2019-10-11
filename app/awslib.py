@@ -11,7 +11,8 @@ def list_eips(region, filter):
     print ("Connecting to ec2...")
     client = boto3.client('ec2', region_name=region)
     if client:
-        print("Connected!")
+        # print("Connected!")
+        print("Getting all EIPs in region %s" % region)
         addresses_dict = client.describe_addresses()
         for eip_dict in addresses_dict['Addresses']:
             if eip_dict['PublicIp'] not in filter:
@@ -32,7 +33,7 @@ def get_active_balancer(dns_name, region):
     print ("Connecting to route53...")
     rconn = boto3.client('route53', region_name=region)
     if rconn:
-        print("Connected!")
+        # print("Connected!")
         zones = rconn.list_hosted_zones()
         chosen_zone = None
         print ("Looking up zone ID...")
