@@ -1,4 +1,3 @@
-import socket
 import boto3
 import re
 import os
@@ -22,7 +21,7 @@ def list_eips(region, filter):
 
 # List IPs of load balancer
 def list_balancer_ips(dns_name):
-    print ("Getting load balancer IP(s) for URL %s..." % dns_name)
+    print ("  Getting IP(s) for URL %s..." % dns_name)
     return socket.gethostbyname_ex(dns_name)[2]
 
 
@@ -280,17 +279,17 @@ def get_all_records(r53_client, zone_id, start_record_name=None, start_record_ty
 
 # Return prefixed record sets of a hosted zone ID
 def get_records_from_zone(zone_id, record_prefixes):
-    print ("Enter get records from zone")
+    print ("  Enter get records from zone")
     entries = []
     r = boto3.client('route53')
     if r:
         #Kinda hacky to support both arrays and strings as a value
         if not isinstance(record_prefixes, list):
             record_prefixes = [record_prefixes]
-        print ("record_prefixes: " + str(record_prefixes))
+        print ("  record_prefixes: " + str(record_prefixes))
         # Get all records:
         resource_record_sets = get_all_records(r, zone_id)
-        print('Found %s resource records for zone %s' % (str(len(resource_record_sets)), zone_id))
+        print('  Found %s resource records for zone %s' % (str(len(resource_record_sets)), zone_id))
         for record in resource_record_sets:
             for prefix in record_prefixes:
                 try:
@@ -309,6 +308,7 @@ def get_records_from_zone(zone_id, record_prefixes):
                             else:
                                 entries.append(entry)
                 except Exception:
-                    print('Exception trying to match records')
+                    print('  Exception trying to match records')
                     continue
-    return entries
+    print('  Found %s records that match given prefix' % (str(len(set(entries)))))
+    return list(set(entries))

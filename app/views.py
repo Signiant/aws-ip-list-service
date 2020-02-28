@@ -159,9 +159,19 @@ def handle_app(appname):
                         elif config.get('R53'):
                             ret = {}
                             for item in config['R53']:
+                                print('Getting records for %s' % item['Name'])
                                 ret[item['Name']] = {}
                                 ret[item['Name']]['all_ips'] = []
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
+                                inclusions = item.get('inclusions')
+                                if inclusions:
+                                    print('Adding inclusions from config')
+                                    if 'dns_list' in inclusions:
+                                        for dns in inclusions['dns_list']:
+                                            dns_ips = awslib.list_balancer_ips(dns)
+                                            ret[item['Name']]['all_ips'].extend(dns_ips)
+                                    if 'ip_list' in inclusions:
+                                        ret[item['Name']]['all_ips'].extend(inclusions['ip_list'])
                             break
 
                         region = config['region']
@@ -230,6 +240,7 @@ def handle_app(appname):
                                         ret[region]['all_ips'].extend(inst_ips)
 
                         if inclusions:
+                            print('Adding inclusions from config')
                             if 'dns_list' in inclusions:
                                 for dns in inclusions['dns_list']:
                                     dns_ips = awslib.list_balancer_ips(dns)
