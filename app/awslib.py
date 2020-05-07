@@ -252,8 +252,12 @@ def get_file_contents(bucket_name, s3_path):
     print ("Retrieving config file...")
     session = boto3.session.Session()
     s3_client = session.client('s3')
-    response = s3_client.get_object(Bucket=s3_bucket, Key=s3_key)
-    result = json.loads(response['Body'].read().decode())
+    try:
+        response = s3_client.get_object(Bucket=s3_bucket, Key=s3_key)
+        if 'Body' in response:
+            result = json.loads(response['Body'].read().decode())
+    except Exception as e:
+        print("Exception fetching S3 object" + e)
     print ("Done")
     return result
 
