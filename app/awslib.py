@@ -253,11 +253,11 @@ def get_file_contents(bucket_name, s3_path):
     session = boto3.session.Session()
     s3_client = session.client('s3')
     try:
-        response = s3_client.get_object(Bucket=s3_bucket, Key=s3_key)
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_path)
         if 'Body' in response:
             result = json.loads(response['Body'].read().decode())
     except Exception as e:
-        print("Exception fetching S3 object" + e)
+        print("Exception fetching S3 object" + str(e))
     print ("Done")
     return result
 
