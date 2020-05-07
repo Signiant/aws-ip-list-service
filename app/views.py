@@ -173,6 +173,29 @@ def handle_app(appname):
                                     if 'ip_list' in inclusions:
                                         ret[item['Name']]['all_ips'].extend(inclusions['ip_list'])
                             break
+                        elif config.get('S3'):
+                            ret = {}
+                            for item in config['S3']:
+                                print('Getting records for %s' % item['Name'])
+                                bucket_name = item.get('bucket')
+                                object_path = item.get('objectpath')
+                                region = item.get('region')
+                                ret[item['Name']] = {}
+                                ret[item['Name']]['all_ips'] = []
+                                if bucket_name and object_path and region:
+                                    file_contents = awslib.get_file_contents(bucket_name, object_path)
+                                    region_data = file_contents.get(region)
+                                    ret[item['Name']]['all_ips'] = region_data
+                                inclusions = item.get('inclusions')
+                                if inclusions:
+                                    print('Adding inclusions from config')
+                                    if 'dns_list' in inclusions:
+                                        for dns in inclusions['dns_list']:
+                                            dns_ips = awslib.list_balancer_ips(dns)
+                                            ret[item['Name']]['all_ips'].extend(dns_ips)
+                                    if 'ip_list' in inclusions:
+                                        ret[item['Name']]['all_ips'].extend(inclusions['ip_list'])
+                            break
 
                         region = config['region']
 

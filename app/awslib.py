@@ -2,6 +2,7 @@ import boto3
 import re
 import os
 import socket
+import json
 
 
 # List of all EIPs in the given region
@@ -244,6 +245,17 @@ def get_file(bucket_name, s3_path, local_path):
         result = True
     return result
 
+
+# Get json file contents from S3
+def get_file_contents(bucket_name, s3_path):
+    result = None
+    print ("Retrieving config file...")
+    session = boto3.session.Session()
+    s3_client = session.client('s3')
+    response = s3_client.get_object(Bucket=s3_bucket, Key=s3_key)
+    result = json.loads(response['Body'].read().decode())
+    print ("Done")
+    return result
 
 
 def get_all_records(r53_client, zone_id, start_record_name=None, start_record_type=None, start_record_identifier=None):
