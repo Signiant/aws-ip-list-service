@@ -160,7 +160,7 @@ def handle_app(appname):
                             for item in config['R53']:
                                 print('Getting records for %s' % item['Name'])
                                 ret[item['Name']] = {}
-                                ret[item['Name']]['last_modified']=awslib.get_file_date(bucket_name, config['s3filepath'])
+                                ret[item['Name']]['last_modified']=[str(awslib.get_file_date(bucket_name, config['s3filepath']))]
                                 ret[item['Name']]['all_ips'] = []
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
                                 inclusions = item.get('inclusions')
@@ -181,7 +181,7 @@ def handle_app(appname):
                                 object_path = item.get('objectpath')
                                 region = item.get('region')
                                 ret[item['Name']] = {}
-                                ret[item['Name']]['last_modified'] = awslib.get_file_date(bucket_name, object_path)
+                                ret[item['Name']]['last_modified'] = [str(awslib.get_file_date(bucket_name, object_path))]
                                 ret[item['Name']]['all_ips'] = []
                                 if bucket_name and object_path and region:
                                     file_contents = awslib.get_file_contents(bucket_name, object_path)
