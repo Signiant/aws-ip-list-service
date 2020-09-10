@@ -161,7 +161,7 @@ def handle_app(appname):
                             for item in config['R53']:
                                 print('Getting records for %s' % item['Name'])
                                 ret[item['Name']] = {}
-                                ret['last_modified'] = modified_date
+                                ret[item['Name']]['last_modified'] = modified_date
                                 ret[item['Name']]['all_ips'] = []
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
                                 inclusions = item.get('inclusions')
@@ -182,7 +182,7 @@ def handle_app(appname):
                                 object_path = item.get('objectpath')
                                 region = item.get('region')
                                 ret[item['Name']] = {}
-                                ret['last_modified'] = modified_date
+                                ret[item['Name']]['last_modified'] = modified_date
                                 ret[item['Name']]['all_ips'] = []
                                 if bucket_name and object_path and region:
                                     file_contents = awslib.get_file_contents(bucket_name, object_path)
@@ -214,7 +214,7 @@ def handle_app(appname):
                         inst_check = config.get('show_inst_ip')
                         if not ret.get(region):
                             ret[region] = {}
-                            ret['last_modified'] = modified_date
+                            ret[region]['last_modified'] = modified_date
                         if not ret[region].get('all_ips'):
                             ret[region]['all_ips'] = []
 
