@@ -22,7 +22,6 @@ elif bucket_name == None:
     print ("No bucket name specified")
 else:
     awslib.get_file(bucket_name, s3path, path)
-    file_date = awslib.get_file_date(bucket_name, s3path, path)
 #####
 # Caching parameters
 #####
