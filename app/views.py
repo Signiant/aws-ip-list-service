@@ -102,7 +102,7 @@ def handle_app(appname):
     verbose = False
     chosen_region = None
     query_string = request.query_string
-
+    file_path = None
     if not query_string == "":
         for query in query_string.split(b'&'):
             if b'verbose' in query.lower():
@@ -157,10 +157,11 @@ def handle_app(appname):
                             break
                         elif config.get('R53'):
                             ret = {}
+                            file_path = s3path
                             for item in config['R53']:
                                 print('Getting records for %s' % item['Name'])
                                 ret[item['Name']] = {}
-                                ret[item['Name']]['last_modified']=[str(awslib.get_file_date(bucket_name, config['s3filepath']))]
+                                ret[item['Name']]['last_modified']=[str(awslib.get_file_date(bucket_name, file_path))]
                                 ret[item['Name']]['all_ips'] = []
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
                                 inclusions = item.get('inclusions')
