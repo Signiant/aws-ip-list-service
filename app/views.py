@@ -102,7 +102,7 @@ def handle_app(appname):
     verbose = False
     chosen_region = None
     query_string = request.query_string
-    file_path = None
+    modified_date = ""
     if not query_string == "":
         for query in query_string.split(b'&'):
             if b'verbose' in query.lower():
@@ -141,7 +141,8 @@ def handle_app(appname):
                     redir = _check_ssl(request.url, verbose)
             if not redir == None:
                 return redir
-
+            if 'last_modified' in data:
+                modified_date = str(data['last_modified'])
             for app in data['apps']:
                 # create url link for both name and alternative name for ip-range apps
                 if appname.lower() == app['name'].lower() or appname.lower() == str(app.get('altname')).lower():
@@ -161,7 +162,7 @@ def handle_app(appname):
                             for item in config['R53']:
                                 print('Getting records for %s' % item['Name'])
                                 ret[item['Name']] = {}
-                                ret[item['Name']]['last_modified']=[str(awslib.get_file_date(bucket_name, file_path))]
+                                ret[item['Name']]['last_modified']=modified_date
                                 ret[item['Name']]['all_ips'] = []
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
                                 inclusions = item.get('inclusions')
@@ -182,7 +183,7 @@ def handle_app(appname):
                                 object_path = item.get('objectpath')
                                 region = item.get('region')
                                 ret[item['Name']] = {}
-                                ret[item['Name']]['last_modified'] = [str(awslib.get_file_date(bucket_name, object_path))]
+                                ret[item['Name']]['last_modified'] = modified_date
                                 ret[item['Name']]['all_ips'] = []
                                 if bucket_name and object_path and region:
                                     file_contents = awslib.get_file_contents(bucket_name, object_path)
