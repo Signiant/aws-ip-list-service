@@ -245,6 +245,15 @@ def get_file(bucket_name, s3_path, local_path):
         result = True
     return result
 
+# Get a file date from S3
+def get_file_date(bucket_name, s3_path):
+    print ("Retrieving config file date...")
+    s3 = boto3.resource('s3')
+    file_object = s3.Object(bucket_name,s3_path)
+    file_date = file_object.last_modified
+    print ("Done")
+    return file_date
+
 
 # Get json file contents from S3
 def get_file_contents(bucket_name, s3_path):
