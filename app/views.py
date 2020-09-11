@@ -102,7 +102,7 @@ def handle_app(appname):
     verbose = False
     chosen_region = None
     query_string = request.query_string
-    modified_date = ""
+    modified_date = None
     if not query_string == "":
         for query in query_string.split(b'&'):
             if b'verbose' in query.lower():
@@ -161,10 +161,12 @@ def handle_app(appname):
                             for item in config['R53']:
                                 print('Getting records for %s' % item['Name'])
                                 ret[item['Name']] = {}
-                                ret[item['Name']]['last_modified'] = modified_date
+
                                 ret[item['Name']]['all_ips'] = []
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
                                 inclusions = item.get('inclusions')
+                                if modified_date:
+                                    ret[item['Name']]['last_modified'] = modified_date
                                 if inclusions:
                                     print('Adding inclusions from config')
                                     if 'dns_list' in inclusions:
@@ -182,8 +184,9 @@ def handle_app(appname):
                                 object_path = item.get('objectpath')
                                 region = item.get('region')
                                 ret[item['Name']] = {}
-                                ret[item['Name']]['last_modified'] = modified_date
                                 ret[item['Name']]['all_ips'] = []
+                                if modified_date:
+                                    ret[item['Name']]['last_modified'] = modified_date
                                 if bucket_name and object_path and region:
                                     file_contents = awslib.get_file_contents(bucket_name, object_path)
                                     region_data = file_contents.get(region)
@@ -214,7 +217,8 @@ def handle_app(appname):
                         inst_check = config.get('show_inst_ip')
                         if not ret.get(region):
                             ret[region] = {}
-                            ret[region]['last_modified'] = modified_date
+                            if modified_date:
+                                ret[region]['last_modified'] = modified_date
                         if not ret[region].get('all_ips'):
                             ret[region]['all_ips'] = []
 
