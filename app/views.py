@@ -162,8 +162,9 @@ def handle_app(appname):
 
                                 ret[item['Name']]['all_ips'] = []
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
-                                modified_date = item.get('last_modified')
-                                ret[item['Name']]['last_modified'] = modified_date
+                                if 'last_modified' in item:
+                                    modified_date = str(item['last_modified'])
+                                    ret[item['Name']]['last_modified'] = modified_date
                                 inclusions = item.get('inclusions')
                                 if inclusions:
                                     print('Adding inclusions from config')
@@ -183,7 +184,9 @@ def handle_app(appname):
                                 region = item.get('region')
                                 ret[item['Name']] = {}
                                 ret[item['Name']]['all_ips'] = []
-                                modified_date = item.get('last_modified')
+                                if 'last_modified' in item:
+                                    modified_date = str(item['last_modified'])
+                                    ret[item['Name']]['last_modified'] = modified_date
                                 ret[item['Name']]['last_modified'] = modified_date
                                 if bucket_name and object_path and region:
                                     file_contents = awslib.get_file_contents(bucket_name, object_path)
@@ -216,7 +219,9 @@ def handle_app(appname):
                         modified_date = config.get('last_modified')
                         if not ret.get(region):
                             ret[region] = {}
-                            ret[region]['last_modified'] = modified_date
+                            if 'last_modified' in config:
+                                modified_date = str(config.get('last_modified'))
+                                ret[region]['last_modified'] = modified_date
                         if not ret[region].get('all_ips'):
                             ret[region]['all_ips'] = []
 
