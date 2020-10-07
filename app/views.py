@@ -141,8 +141,6 @@ def handle_app(appname):
                     redir = _check_ssl(request.url, verbose)
             if not redir == None:
                 return redir
-            if 'last_modified' in data:
-                modified_date = str(data['last_modified'])
             for app in data['apps']:
                 # create url link for both name and alternative name for ip-range apps
                 if appname.lower() == app['name'].lower() or appname.lower() == str(app.get('altname')).lower():
@@ -164,9 +162,9 @@ def handle_app(appname):
 
                                 ret[item['Name']]['all_ips'] = []
                                 ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'], item['Pattern'])
+                                modified_date = item.get('last_modified')
+                                ret[item['Name']]['last_modified'] = modified_date
                                 inclusions = item.get('inclusions')
-                                if modified_date:
-                                    ret[item['Name']]['last_modified'] = modified_date
                                 if inclusions:
                                     print('Adding inclusions from config')
                                     if 'dns_list' in inclusions:
@@ -185,8 +183,8 @@ def handle_app(appname):
                                 region = item.get('region')
                                 ret[item['Name']] = {}
                                 ret[item['Name']]['all_ips'] = []
-                                if modified_date:
-                                    ret[item['Name']]['last_modified'] = modified_date
+                                modified_date = item.get('last_modified')
+                                ret[item['Name']]['last_modified'] = modified_date
                                 if bucket_name and object_path and region:
                                     file_contents = awslib.get_file_contents(bucket_name, object_path)
                                     region_data = file_contents.get(region)
@@ -215,10 +213,10 @@ def handle_app(appname):
                         eip_check = config.get('show_eip')
                         lb_check = config.get('show_lb_ip')
                         inst_check = config.get('show_inst_ip')
+                        modified_date = config.get('last_modified')
                         if not ret.get(region):
                             ret[region] = {}
-                            if modified_date:
-                                ret[region]['last_modified'] = modified_date
+                            ret[region]['last_modified'] = modified_date
                         if not ret[region].get('all_ips'):
                             ret[region]['all_ips'] = []
 
