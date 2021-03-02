@@ -307,6 +307,101 @@ def handle_app(appname):
         return jsonify(**eval(line))
 
 
+@app.route('/service-list')
+def handle_service_list():
+    verbose = False
+    chosen_service = None
+    query_string = request.query_string
+
+    if not query_string == "":
+        for query in query_string.split(b'&'):
+            if b'verbose' in query.lower():
+                if query.endswith(b'1'):
+                    verbose = True
+            elif b'service' in query.lower():
+                chosen_service = query[8:].decode("utf-8")
+    suffix = ".json"
+
+    if verbose:
+        suffix = ".verbose" + suffix
+
+    if chosen_service:
+        suffix = "." + chosen_service + suffix
+
+    print("Getting service list")
+
+    cache_file = os.path.join(cache_root_directory, 'service-list' + suffix)
+
+    if _read_from_cache(cache_file):
+        print("Reading cached data for this request.")
+    else:
+        print("Cache is out of date. Refreshing for this request.")
+
+        try:
+            with open(path) as config_data:
+                # This should handle json or yaml
+                data = yaml.safe_load(config_data)
+
+            if verbose:
+                print (request.url)
+            redir = None
+            if nohttps is None:
+                proto = request.headers.get("X-Forwarded-Proto")
+                if not proto == "https":
+                    redir = _check_ssl(request.url, verbose)
+            if redir is not None:
+                return redir
+
+            ret = {}
+            for app in data['apps']:
+                display = app.get('service_list')
+                if not display:
+                    # skip this
+                    continue
+
+                app_name = app.get('name')
+
+                # only run next section if specific service NOT chosen
+                if chosen_service:
+                    if app_name != chosen_service:
+                        continue
+
+                app_config = app.get('config')
+                region_list = []
+                for config in app_config:
+                    if config.get('R53'):
+                        region_list = []
+                        for item in config['R53']:
+                            region_name = item.get('Name')
+                            if region_name not in region_list:
+                                region_list.append(region_name)
+                    elif config.get('S3'):
+                        for item in config['S3']:
+                            region_name = item.get('region')
+                            if region_name not in region_list:
+                                region_list.append(region_name)
+                    else:
+                        region_name = config.get('region')
+                        if region_name not in region_list:
+                            region_list.append(region_name)
+
+                ret[app_name] = region_list
+
+            if not ret:
+                return redirect(url_for('handle_index'), code=302)
+            else:
+                _write_cache(cache_file, ret)
+        except:
+            print ("Error: Unable to load new information")
+            traceback.print_exc()
+
+    with open(cache_file, "r") as cache:
+        # read the first line as cache time
+        cache_time = cache.readline()
+        line = cache.readline()
+        return jsonify(**eval(line))
+
+
 def ip_list_sort(ret):
     """
     sort ips in the nested dict list
@@ -326,12 +421,14 @@ def ip_list_sort(ret):
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+
 def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
     response = make_response(dumps(dict(**kwargs), indent=indent, sort_keys=sort_keys))
     response.headers['Content-Type'] = 'application/json; charset=utf-8'
     response.headers['mimetype'] = 'application/json'
     response_code = status
     return response
+
 
 def _check_ssl(url, verbose=False):
     if verbose:
@@ -340,6 +437,7 @@ def _check_ssl(url, verbose=False):
         return None
     else:
         return redirect("https" + url[4:], code=302)
+
 
 def _write_cache(app_cache_file,data):
     with open(app_cache_file, "w+") as cache:
