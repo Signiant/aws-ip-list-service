@@ -80,8 +80,8 @@ def handle_index():
 
 @app.route('/healthcheck')
 def handle_healthcheck():
-    print("I'm still here. test")
-    return render_template("healthcheck.html")
+    return "I'm still here. test"
+    # return render_template("healthcheck.html")
 
 
 def _read_from_cache(app_cache_file):
@@ -118,9 +118,9 @@ def handle_app():
             # read the first line as cache time
             cache_time = cache.readline()
             line = cache.readline()
-            output = output + line
+            return jsonify(**eval(line))
 
-    return jsonify(**eval(output))
+    # return jsonify(**eval(output))
 
 @app.route('/<appname>')
 def handle_app(appname):
