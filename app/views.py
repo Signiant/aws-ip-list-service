@@ -99,7 +99,7 @@ def _read_from_cache(app_cache_file):
 
 
 @app.route('/all')
-def handle_app():
+def handle_all_app():
     with open(path) as config_data:
         # This should handle json or yaml
         data = yaml.safe_load(config_data)
