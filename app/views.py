@@ -138,17 +138,19 @@ def handle_all_app():
             cache_time = cache.readline()
             line = cache.readline()
 
-            print("every line {0}".format(line))
-            print("jsonify everyline {0}".format(jsonify(**eval(line))))
-            all_list[app_name]=line
+            print("every_line {0}".format(line))
+            print("every_line_type {0}".format(type(line)))
+            # print("jsonify everyline {0}".format(jsonify(**eval(line))))
+            all_list[app_name]=eval(line)
             output = output + line
     # print("all output together {0}".format(output))
     print("all_output_list {0}".format(all_list))
-    # print("jsonify output {0}".format(jsonify(**eval(all_list))))
+    print("all_output_type {0}".format(type(all_list)))
+    # print("jsonify_output {0}".format(jsonify(**eval(all_list))))
 
         # return jsonify(**eval(line))
 
-    return jsonify(all_list)
+    return jsonify(**all_list)
 
 @app.route('/<appname>')
 def handle_app(appname):
