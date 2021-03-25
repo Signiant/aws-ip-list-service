@@ -98,29 +98,29 @@ def _read_from_cache(app_cache_file):
     return read_from_cache
 
 
-@app.route('/all')
-def handle_app():
-    with open(path) as config_data:
-        # This should handle json or yaml
-        data = yaml.safe_load(config_data)
-
-    app_name_list = []
-    for app in data['apps']:
-        app_name_list.append(app['name'])
-
-    output=""
-    for app_name in app_name_list:
-        verbose = False
-        chosen_region = None
-        app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, verbose)
-
-        with open(app_cache_file, "r") as cache:
-            # read the first line as cache time
-            cache_time = cache.readline()
-            line = cache.readline()
-            return jsonify(**eval(line))
-
-    # return jsonify(**eval(output))
+# @app.route('/all')
+# def handle_app():
+#     with open(path) as config_data:
+#         # This should handle json or yaml
+#         data = yaml.safe_load(config_data)
+#
+#     app_name_list = []
+#     for app in data['apps']:
+#         app_name_list.append(app['name'])
+#
+#     output=""
+#     for app_name in app_name_list:
+#         verbose = False
+#         chosen_region = None
+#         app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, verbose)
+#
+#         with open(app_cache_file, "r") as cache:
+#             # read the first line as cache time
+#             cache_time = cache.readline()
+#             line = cache.readline()
+#             return jsonify(**eval(line))
+#
+#     # return jsonify(**eval(output))
 
 @app.route('/<appname>')
 def handle_app(appname):
