@@ -109,7 +109,7 @@ def handle_all_app():
         app_name_list.append(app['name'])
 
     output=""
-
+    all_list={}
     for app_name in app_name_list:
         verbose = False
         chosen_region = None
@@ -140,14 +140,15 @@ def handle_all_app():
 
             print("every line {0}".format(line))
             print("jsonify everyline {0}".format(jsonify(**eval(line))))
+            all_list[app_name]=line
             output = output + line
     print("all output together {0}".format(output))
     # print("all output eval {0}".format(**eval(output)))
-    print("jsonify output {0}".format(jsonify(**eval(output))))
+    print("jsonify output {0}".format(jsonify(**eval(all_list))))
 
         # return jsonify(**eval(line))
 
-    return "still test"
+    return jsonify(**eval(all_list))
 
 @app.route('/<appname>')
 def handle_app(appname):
