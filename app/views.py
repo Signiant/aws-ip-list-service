@@ -142,9 +142,9 @@ def handle_all_app():
             print("jsonify everyline {0}".format(jsonify(**eval(line))))
             all_list[app_name]=line
             output = output + line
-    print("all output together {0}".format(output))
-    # print("all output eval {0}".format(**eval(output)))
-    print("jsonify output {0}".format(jsonify(**eval(all_list))))
+    # print("all output together {0}".format(output))
+    print("all output list {0}".format(all_list))
+    # print("jsonify output {0}".format(jsonify(**eval(all_list))))
 
         # return jsonify(**eval(line))
 
