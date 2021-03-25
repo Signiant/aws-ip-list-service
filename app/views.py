@@ -137,10 +137,18 @@ def handle_all_app():
             # read the first line as cache time
             cache_time = cache.readline()
             line = cache.readline()
+
+            print("every line {0}".format(line))
+            print("every line eval {0}".format(**eval(line)))
+            print("jsonify everyline {0}".format(jsonify(**eval(line))))
             output = output + line
+    print("all output together {0}".format(output))
+    print("all output eval {0}".format(**eval(output)))
+    print("jsonify output {0}".format(jsonify(**eval(output))))
+
         # return jsonify(**eval(line))
 
-    return jsonify(**eval(output))
+    return "still test"
 
 @app.route('/<appname>')
 def handle_app(appname):
