@@ -98,30 +98,48 @@ def _read_from_cache(app_cache_file):
     return read_from_cache
 
 
-# @app.route('/all')
-# def handle_app():
-#     with open(path) as config_data:
-#         # This should handle json or yaml
-#         data = yaml.safe_load(config_data)
-#
-#     app_name_list = []
-#     for app in data['apps']:
-#         app_name_list.append(app['name'])
-#
-#     output=""
-#     app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
-#     for app_name in app_name_list:
-#         verbose = False
-#         chosen_region = None
-#         app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, verbose)
-#
-#         with open(app_cache_file, "r") as cache:
-#             # read the first line as cache time
-#             cache_time = cache.readline()
-#             line = cache.readline()
-#             return jsonify(**eval(line))
-#
-#     # return jsonify(**eval(output))
+@app.route('/all')
+def handle_app():
+    with open(path) as config_data:
+        # This should handle json or yaml
+        data = yaml.safe_load(config_data)
+
+    app_name_list = []
+    for app in data['apps']:
+        app_name_list.append(app['name'])
+
+    output=""
+
+    for app_name in app_name_list:
+        verbose = False
+        chosen_region = None
+        query_string = request.query_string
+        modified_date = None
+        if not query_string == "":
+            for query in query_string.split(b'&'):
+                if b'verbose' in query.lower():
+                    if query.endswith(b'1'):
+                        verbose = True
+                elif b'region' in query.lower():
+                    chosen_region = query[7:].decode("utf-8")
+        suffix = ".json"
+
+        if verbose:
+            suffix = ".verbose" + suffix
+
+        if chosen_region:
+            suffix = "." + chosen_region + suffix
+
+        app_cache_file = os.path.join(cache_root_directory, app_name.lower() + suffix)
+        app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, verbose)
+
+    with open(app_cache_file, "r") as cache:
+        # read the first line as cache time
+        cache_time = cache.readline()
+        line = cache.readline()
+        return jsonify(**eval(line))
+
+    # return jsonify(**eval(output))
 
 @app.route('/<appname>')
 def handle_app(appname):
