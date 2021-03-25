@@ -133,13 +133,14 @@ def handle_all_app():
         app_cache_file = os.path.join(cache_root_directory, app_name.lower() + suffix)
         app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, verbose)
 
-    with open(app_cache_file, "r") as cache:
-        # read the first line as cache time
-        cache_time = cache.readline()
-        line = cache.readline()
-        return jsonify(**eval(line))
+        with open(app_cache_file, "r") as cache:
+            # read the first line as cache time
+            cache_time = cache.readline()
+            line = cache.readline()
+            output = output + line
+        # return jsonify(**eval(line))
 
-    # return jsonify(**eval(output))
+    return jsonify(**eval(output))
 
 @app.route('/<appname>')
 def handle_app(appname):
