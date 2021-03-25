@@ -80,8 +80,8 @@ def handle_index():
 
 @app.route('/healthcheck')
 def handle_healthcheck():
-    return "I'm still here. test"
-    # return render_template("healthcheck.html")
+    print("I'm still here. test")
+    return render_template("healthcheck.html")
 
 
 def _read_from_cache(app_cache_file):
@@ -109,6 +109,7 @@ def _read_from_cache(app_cache_file):
 #         app_name_list.append(app['name'])
 #
 #     output=""
+#     app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
 #     for app_name in app_name_list:
 #         verbose = False
 #         chosen_region = None
