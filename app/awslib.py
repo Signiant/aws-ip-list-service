@@ -8,7 +8,7 @@ import json
 # List of all EIPs in the given region
 def list_eips(region, filter):
     all_eips = []
-    print ("Connecting to ec2...")
+    print("Connecting to ec2...")
     client = boto3.client('ec2', region_name=region)
     if client:
         # print("Connected!")
@@ -30,33 +30,36 @@ def list_balancer_ips(dns_name):
 def get_active_balancer(dns_name, region):
     print('Finding the active load balancer behind %s' % dns_name)
     lb_name = None
-    print ("Connecting to route53...")
-    rconn = boto3.client('route53', region_name=region)
-    if rconn:
+    print("Connecting to route53...")
+    r53_client = boto3.client('route53', region_name=region)
+    if r53_client:
         # print("Connected!")
-        zones = rconn.list_hosted_zones()
+        zones = r53_client.list_hosted_zones()
         chosen_zone = None
-        print ("Looking up zone ID...")
+        print("Looking up zone ID...")
 
         temp_dns_name = dns_name.split('.', 1)[-1]
-        print ("Temp dns_name is %s" % temp_dns_name)
+        print("Temp dns_name is %s" % temp_dns_name)
 
         for zone in zones['HostedZones']:
             # print ("The zone is: %s, the dns_name is %s" % (zone['Name'][:-1], dns_name))
             if zone['Name'][:-1] == dns_name:
-                print ("Found zone that equals the dns name: %s" % zone['Name'])
+                print("Found zone that equals the dns name: %s" % zone['Name'])
                 chosen_zone = zone['Id'][12:]
                 break
 
             elif zone['Name'][:-1] == temp_dns_name:
-                print ("Found zone that equals the temp dns name: %s" % zone['Name'])
+                print("Found zone that equals the temp dns name: %s" % zone['Name'])
                 chosen_zone = zone['Id'][12:]
 
         if chosen_zone:
-            print ("Retrieving record sets...")
-            rset = rconn.list_resource_record_sets(HostedZoneId=chosen_zone, StartRecordName=dns_name, StartRecordType="A", MaxItems="1")['ResourceRecordSets'][0]
-            print ("Record set retrieved is : ")
-            print (rset)
+            print("Retrieving record sets...")
+            rset = r53_client.list_resource_record_sets(HostedZoneId=chosen_zone,
+                                                        StartRecordName=dns_name,
+                                                        StartRecordType="A",
+                                                        MaxItems="1")['ResourceRecordSets'][0]
+            print("Record set retrieved is : ")
+            print(rset)
             if 'AliasTarget' in rset:
                 lb_name = rset['AliasTarget']['DNSName']
 
@@ -66,7 +69,7 @@ def get_active_balancer(dns_name, region):
                 # Split on periods, take the first group (lbname dns), split on hyphens and take all but the end and rejoin with hyphens
                 lb_name = "-".join(lb_name.split(".")[0].split("-")[:-1])
 
-                print ("Retrieved load-balancer: " + str(lb_name))
+                print("Retrieved load-balancer: " + str(lb_name))
     else:
         print("ERROR: Failed to connect to R53")
 
@@ -75,7 +78,7 @@ def get_active_balancer(dns_name, region):
 
 # All Classic load balancers
 def _get_v1_lbs(elb_client, next_marker=None):
-    '''Get the v1 ELBs'''
+    """Get the v1 ELBs"""
     result = []
     if next_marker:
         query_result = elb_client.describe_load_balancers(Marker=next_marker)
@@ -92,7 +95,7 @@ def _get_v1_lbs(elb_client, next_marker=None):
 
 # All Application and Network load balancers
 def _get_v2_lbs(elb_client, next_marker=None):
-    '''Get the v2 ELBs'''
+    """Get the v2 ELBs"""
     result = []
     if next_marker:
         query_result = elb_client.describe_load_balancers(Marker=next_marker)
@@ -170,23 +173,23 @@ def _get_instances_public_ip(ec2_client, instances):
 
 # IPs of running instances
 def list_instance_ips(lb_name, region):
-    print ("Looking for instances behind load balancer %s..." % lb_name)
+    print("Looking for instances behind load balancer %s..." % lb_name)
     instance_ips = []
     lb_found = False
-    print ("Connecting to ec2 elb v1...")
+    print("Connecting to ec2 elb v1...")
     elbv1 = boto3.client('elb', region_name=region)
     if elbv1:
-        # print ("Connected!")
-        print ("Retrieving classic load balancers...")
+        # print("Connected!")
+        print("Retrieving classic load balancers...")
         v1_lbs = _get_v1_lbs(elbv1, next_marker=None)
         ec2_client = boto3.client('ec2', region_name=region)
         if ec2_client:
             for lb in v1_lbs:
                 if lb_name in lb['LoadBalancerName'].lower():
                     print("Found the load balancer")
-                    print ("Processing instances for ELB %s" % lb['LoadBalancerName'])
+                    print("Processing instances for ELB %s" % lb['LoadBalancerName'])
                     instances = [inst['InstanceId'] for inst in lb['Instances']]
-                    print ("Instances discovered: %s" % str(instances))
+                    print("Instances discovered: %s" % str(instances))
                     if instances:
                         instance_ips.extend(_get_instances_public_ip(ec2_client, instances))
                     lb_found = True
@@ -194,16 +197,16 @@ def list_instance_ips(lb_name, region):
             # Only look at v2 load balancers if we haven't already found the load balancer above
             if not lb_found:
                 print("Didn't find the load balancer in the list of classic load balancers")
-                print ("Connecting to ec2 elb v2...")
+                print("Connecting to ec2 elb v2...")
                 elbv2 = boto3.client('elbv2', region_name=region)
                 if elbv2:
-                    # print ("Connected!")
-                    print ("Retrieving V2 load balancers...")
+                    # print("Connected!")
+                    print("Retrieving V2 load balancers...")
                     v2_lbs = _get_v2_lbs(elbv2, next_marker=None)
                     for lb in v2_lbs:
                         if lb_name in lb['LoadBalancerName'].lower():
                             print("Found the load balancer")
-                            print ("Processing target groups for %s" % lb['LoadBalancerName'])
+                            print("Processing target groups for %s" % lb['LoadBalancerName'])
                             lb_arn = lb['LoadBalancerArn']
                             # Get the target groups for this load balancer
                             response = elbv2.describe_target_groups(LoadBalancerArn=lb_arn)
@@ -234,31 +237,31 @@ def list_instance_ips(lb_name, region):
 def get_file(bucket_name, s3_path, local_path):
     result = False
     if os.path.isfile(local_path):
-        print ("Deleting current file...")
+        print("Deleting current file...")
         os.remove(local_path)
-        print ("Done")
-    print ("Retrieving config file...")
+        print("Done")
+    print("Retrieving config file...")
     s3 = boto3.resource('s3')
     s3.Bucket(bucket_name).download_file(s3_path, local_path)
-    print ("Done")
+    print("Done")
     if os.path.exists(local_path):
         result = True
     return result
 
 # Get a file date from S3
 def get_file_date(bucket_name, s3_path):
-    print ("Retrieving config file date...")
+    print("Retrieving config file date...")
     s3 = boto3.resource('s3')
     file_object = s3.Object(bucket_name,s3_path)
     file_date = file_object.last_modified
-    print ("Done")
+    print("Done")
     return file_date
 
 
 # Get json file contents from S3
 def get_file_contents(bucket_name, s3_path):
     result = None
-    print ("Retrieving config file...")
+    print("Retrieving config file...")
     session = boto3.session.Session()
     s3_client = session.client('s3')
     try:
@@ -267,7 +270,7 @@ def get_file_contents(bucket_name, s3_path):
             result = json.loads(response['Body'].read().decode())
     except Exception as e:
         print("Exception fetching S3 object" + str(e))
-    print ("Done")
+    print("Done")
     return result
 
 
@@ -304,16 +307,16 @@ def get_all_records(r53_client, zone_id, start_record_name=None, start_record_ty
 
 # Return prefixed record sets of a hosted zone ID
 def get_records_from_zone(zone_id, record_prefixes):
-    print ("  Enter get records from zone")
+    print("  Enter get records from zone")
     entries = []
-    r = boto3.client('route53')
-    if r:
+    r53_client = boto3.client('route53')
+    if r53_client:
         #Kinda hacky to support both arrays and strings as a value
         if not isinstance(record_prefixes, list):
             record_prefixes = [record_prefixes]
-        print ("  record_prefixes: " + str(record_prefixes))
+        print("  record_prefixes: " + str(record_prefixes))
         # Get all records:
-        resource_record_sets = get_all_records(r, zone_id)
+        resource_record_sets = get_all_records(r53_client, zone_id)
         print('  Found %s resource records for zone %s' % (str(len(resource_record_sets)), zone_id))
         for record in resource_record_sets:
             for prefix in record_prefixes:
@@ -321,13 +324,14 @@ def get_records_from_zone(zone_id, record_prefixes):
                     if re.match(prefix,record['Name']):
                         if 'ResourceRecords' in record:
                             entry = record['ResourceRecords'][0]['Value']
-                            #Check if it's not an IP address.. Since the way this is coded it's easier than checking the type (we're searching for an A record)
+                            # Check if it's not an IP address.. Since the way this is coded it's easier than
+                            # checking the type (we're searching for an A record)
                             if not re.match("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$",entry):
                                 try:
-                                    for addr in [ str(i[4][0]) for i in socket.getaddrinfo(entry, 80) ]:
+                                    for addr in [str(i[4][0]) for i in socket.getaddrinfo(entry, 80)]:
                                         if addr not in entries:
                                             entries.append(addr)
-                                #Nothing we can do
+                                # Nothing we can do
                                 except Exception:
                                     continue
                             else:

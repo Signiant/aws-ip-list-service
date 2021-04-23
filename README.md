@@ -34,21 +34,22 @@ apps:
 }
 ````
 
-**apps:** An array of apps.   
-**name:** This is the name the browser will need to point to in order to access this app's IP list.
-**[hidden:]** This is an *optional* parameter the user can specify to create a hidden link.
-**[altname:]** This is an *optional* parameter that the user can use to create a optional url webpage with same info (for backward compatibility purpose).
-**[additionalText:]** This is an *optional* parameter that the user can use to add additional text beside the app name.
-**config:** An array of variables needed.   
-**dnsname:** The domain name.   
-**exclusions:** List of IPs to be excluded from the result.   
-**[inclusions]:** This is an optional dictionary with elements to query for IPs.   
-**[dns_list]:** This is an optional list of domains to query for IPs.
-**[ip_list]:** This is an optional list of IPs to include.   
-**show_eip:** Whether or not to show the list of Elastic IPs associated with your account.   
-**show_lb_ip:** Whether or not to show the IPs associated with the load balancer.   
-**show_inst_up:** Whether or not to show the IPs of the currently running instances.
-**[lb_names]:** If the dnsname above resolves directly to IP(s), supply the load balancer name(s) if show_inst_ip is set to true
+- **apps:** An array of apps.
+- **name:** This is the name the browser will need to point to in order to access this app's IP list.
+- **[hidden:]** This is an *optional* parameter the user can specify to create a hidden link.
+- **[altname:]** This is an *optional* parameter that the user can use to create a optional url webpage with same info (for backward compatibility purpose).
+- **[additionalText:]** This is an *optional* parameter that the user can use to add additional text beside the app name.
+- **config:** An array of variables needed.
+    - **dnsname:** The domain name.
+    - **region:** The region the service is in.
+    - **exclusions:** List of IPs to be excluded from the result.
+    - **[inclusions]:** This is an optional dictionary with elements to query for IPs.
+        - **[dns_list]:** This is an optional list of domains to query for IPs
+        - **[ip_list]:** This is an optional list of IPs to include.
+    - **show_eip:** Whether or not to show the list of Elastic IPs associated with your account.
+    - **show_lb_ip:** Whether or not to show the IPs associated with the load balancer.
+    - **show_inst_ip:** Whether or not to show the IPs of the currently running instances.
+    - **[lb_names]:** If the dnsname above resolves directly to IP(s), supply the load balancer name(s) if show_inst_ip is set to true
 
 An example URL would be: localhost:5000/app .   
 The URL can take up to 2 query strings, verbose and region.    
