@@ -7,29 +7,30 @@ import yaml
 from json import dumps
 from os.path import join
 from flask import make_response, request, redirect, url_for
-import os, time
+import os
+import time
 import traceback
 
-bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
-s3path = os.environ.get('IPLIST_CONFIG_PATH')
-nohttps = os.environ.get('NOHTTPS')
+BUCKET_NAME = os.environ.get('IPLIST_CONFIG_BUCKET')
+S3PATH = os.environ.get('IPLIST_CONFIG_PATH')
+NOHTTPS = os.environ.get('NOHTTPS')
 
-path = join('iplist_config', 'config')
+PATH = join('iplist_config', 'config')
 
-if s3path == None:
-    print ("No Env Labeled IPLIST_CONFIG_PATH")
-elif bucket_name == None:
-    print ("No bucket name specified")
+if S3PATH == None:
+    print("No Env Labeled IPLIST_CONFIG_PATH")
+elif BUCKET_NAME == None:
+    print("No bucket name specified")
 else:
-    awslib.get_file(bucket_name, s3path, path)
+    awslib.get_file(BUCKET_NAME, S3PATH, PATH)
 #####
 # Caching parameters
 #####
-cache_timeout_period_in_seconds = 300
-cache_root_directory = "/ip-range-cache"
+CACHE_TIMEOUT_PERIOD_IN_SECONDS = 300
+CACHE_ROOT_DIRECTORY = "/ip-range-cache"
 
 try:
-    os.makedirs(cache_root_directory)
+    os.makedirs(CACHE_ROOT_DIRECTORY)
 except:
     pass
 
@@ -37,7 +38,7 @@ except:
 @app.route('/')
 def handle_index():
     redir = None
-    if nohttps == None:
+    if NOHTTPS == None:
         proto = request.headers.get("X-Forwarded-Proto")
         if not proto == "https":
             redir = _check_ssl(request.url)
@@ -45,7 +46,7 @@ def handle_index():
     if not redir == None:
         return redir
 
-    with open(path) as config_data:
+    with open(PATH) as config_data:
         # This should handle json or yaml
         data = yaml.safe_load(config_data)
 
@@ -91,7 +92,7 @@ def _read_from_cache(app_cache_file):
         with open(app_cache_file, "r") as cache:
             cache_time = float(cache.readline().strip())
             current_time = time.time()
-            if (current_time - cache_time) > cache_timeout_period_in_seconds:
+            if (current_time - cache_time) > CACHE_TIMEOUT_PERIOD_IN_SECONDS:
                 read_from_cache = False
     except IOError:
         read_from_cache = False
@@ -100,7 +101,7 @@ def _read_from_cache(app_cache_file):
 
 @app.route('/all')
 def handle_all_app():
-    with open(path) as config_data:
+    with open(PATH) as config_data:
         # This should handle json or yaml
         data = yaml.safe_load(config_data)
 
@@ -108,8 +109,8 @@ def handle_all_app():
     for app in data['apps']:
         app_name_list.append(app['name'])
 
-    output=""
-    all_list={}
+    output = ""
+    all_list = {}
     for app_name in app_name_list:
         verbose = False
         chosen_region = None
@@ -130,7 +131,7 @@ def handle_all_app():
         if chosen_region:
             suffix = "." + chosen_region + suffix
 
-        app_cache_file = os.path.join(cache_root_directory, app_name.lower() + suffix)
+        app_cache_file = os.path.join(CACHE_ROOT_DIRECTORY, app_name.lower() + suffix)
         app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, verbose)
 
         with open(app_cache_file, "r") as cache:
@@ -164,7 +165,7 @@ def handle_app(appname):
     if chosen_region:
         suffix = "." + chosen_region + suffix
 
-    app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
+    app_cache_file = os.path.join(CACHE_ROOT_DIRECTORY, appname.lower() + suffix)
 
     if _read_from_cache(app_cache_file):
         print("Reading cached data for this request.")
@@ -203,7 +204,7 @@ def handle_service_list():
 
     print("Getting service list")
 
-    cache_file = os.path.join(cache_root_directory, 'service-list' + suffix)
+    cache_file = os.path.join(CACHE_ROOT_DIRECTORY, 'service-list' + suffix)
 
     if _read_from_cache(cache_file):
         print("Reading cached data for this request.")
@@ -211,14 +212,14 @@ def handle_service_list():
         print("Cache is out of date. Refreshing for this request.")
 
         try:
-            with open(path) as config_data:
+            with open(PATH) as config_data:
                 # This should handle json or yaml
                 data = yaml.safe_load(config_data)
 
             if verbose:
                 print (request.url)
             redir = None
-            if nohttps is None:
+            if NOHTTPS is None:
                 proto = request.headers.get("X-Forwarded-Proto")
                 if not proto == "https":
                     redir = _check_ssl(request.url, verbose)
@@ -312,7 +313,7 @@ def _check_ssl(url, verbose=False):
         return redirect("https" + url[4:], code=302)
 
 
-def _write_cache(app_cache_file,data):
+def _write_cache(app_cache_file, data):
     with open(app_cache_file, "w+") as cache:
         cache.write(str(time.time()))
         cache.write("\n")
@@ -321,7 +322,7 @@ def _write_cache(app_cache_file,data):
 
 def parse_data_from_file(appname, chosen_region, app_cache_file, verbose):
     try:
-        with open(path) as config_data:
+        with open(PATH) as config_data:
             # This should handle json or yaml
             data = yaml.safe_load(config_data)
 
@@ -330,7 +331,7 @@ def parse_data_from_file(appname, chosen_region, app_cache_file, verbose):
         if verbose:
             print(request.url)
         redir = None
-        if nohttps == None:
+        if NOHTTPS == None:
             proto = request.headers.get("X-Forwarded-Proto")
             if not proto == "https":
                 redir = _check_ssl(request.url, verbose)
@@ -345,7 +346,7 @@ def parse_data_from_file(appname, chosen_region, app_cache_file, verbose):
 
                     if config.get('s3filepath'):
                         datapath = config.get('localpath')
-                        awslib.get_file(bucket_name, config['s3filepath'], datapath)
+                        awslib.get_file(BUCKET_NAME, config['s3filepath'], datapath)
                         with open(datapath) as filedata:
                             output = json.load(filedata)
                         break
