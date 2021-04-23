@@ -132,17 +132,18 @@ def handle_all_app():
             suffix = "." + chosen_region + suffix
 
         app_cache_file = os.path.join(CACHE_ROOT_DIRECTORY, app_name.lower() + suffix)
-        app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, verbose)
+        app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, data, verbose)
 
         with open(app_cache_file, "r") as cache:
             # read the first line as cache time
             cache_time = cache.readline()
             line = cache.readline()
 
-            all_list[app_name]=eval(line)
+            all_list[app_name] = eval(line)
             output = output + line
 
     return jsonify(**all_list)
+
 
 @app.route('/<appname>')
 def handle_app(appname):
@@ -217,7 +218,7 @@ def handle_service_list():
                 data = yaml.safe_load(config_data)
 
             if verbose:
-                print (request.url)
+                print(request.url)
             redir = None
             if NOHTTPS is None:
                 proto = request.headers.get("X-Forwarded-Proto")
@@ -266,7 +267,7 @@ def handle_service_list():
             else:
                 _write_cache(cache_file, ret)
         except:
-            print ("Error: Unable to load new information")
+            print("Error: Unable to load new information")
             traceback.print_exc()
 
     with open(cache_file, "r") as cache:
@@ -293,7 +294,8 @@ def ip_list_sort(ret):
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico',
+                               mimetype='image/vnd.microsoft.icon')
 
 
 def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
@@ -306,7 +308,7 @@ def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
 
 def _check_ssl(url, verbose=False):
     if verbose:
-        print ("Current scheme: %s" % url[:5])
+        print("Current scheme: %s" % url[:5])
     if url[:5] == "https":
         return None
     else:
@@ -320,26 +322,22 @@ def _write_cache(app_cache_file, data):
         cache.write(str(data))
 
 
-def parse_data_from_file(appname, chosen_region, app_cache_file, verbose):
+def parse_data_from_file(app_name, chosen_region, app_cache_file, data, verbose):
     try:
-        with open(PATH) as config_data:
-            # This should handle json or yaml
-            data = yaml.safe_load(config_data)
-
         ret = {}
 
         if verbose:
             print(request.url)
-        redir = None
-        if NOHTTPS == None:
+        redirect_to_https = None
+        if NOHTTPS is None:
             proto = request.headers.get("X-Forwarded-Proto")
             if not proto == "https":
-                redir = _check_ssl(request.url, verbose)
-        if not redir == None:
-            return redir
+                redirect_to_https = _check_ssl(request.url, verbose)
+        if redirect_to_https:
+            return redirect_to_https
         for app in data['apps']:
             # create url link for both name and alternative name for ip-range apps
-            if appname.lower() == app['name'].lower() or appname.lower() == str(app.get('altname')).lower():
+            if app_name.lower() == app['name'].lower() or app_name.lower() == str(app.get('altname')).lower():
                 app_config = app['config']
 
                 for config in app_config:

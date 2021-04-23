@@ -261,7 +261,7 @@ def get_file_date(bucket_name, s3_path):
 # Get json file contents from S3
 def get_file_contents(bucket_name, s3_path):
     result = None
-    print("Retrieving config file...")
+    print(f"Retrieving config file ({bucket_name}/{s3_path})")
     session = boto3.session.Session()
     s3_client = session.client('s3')
     try:
