@@ -173,7 +173,7 @@ def handle_app(appname):
     else:
         print("Cache is out of date. Refreshing for this request.")
 
-        app_cache_file = parse_data_from_file(appname, chosen_region, app_cache_file, verbose)
+        app_cache_file = parse_data_from_file(appname, chosen_region, app_cache_file, verbose=verbose)
 
     with open(app_cache_file, "r") as cache:
         # read the first line as cache time
@@ -322,9 +322,14 @@ def _write_cache(app_cache_file, data):
         cache.write(str(data))
 
 
-def parse_data_from_file(app_name, chosen_region, app_cache_file, data, verbose):
+def parse_data_from_file(app_name, chosen_region, app_cache_file, data=None, verbose=False):
     try:
         ret = {}
+
+        if not data:
+            with open(PATH) as config_data:
+                # This should handle json or yaml
+                data = yaml.safe_load(config_data)
 
         if verbose:
             print(request.url)
