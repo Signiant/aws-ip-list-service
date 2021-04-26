@@ -269,7 +269,7 @@ def get_file_contents(bucket_name, s3_path):
         if 'Body' in response:
             result = json.loads(response['Body'].read().decode())
     except Exception as e:
-        print("Exception fetching S3 object" + str(e))
+        print(f"Exception fetching S3 object ({bucket_name}/{s3_path})" + str(e))
     print("Done")
     return result
 
