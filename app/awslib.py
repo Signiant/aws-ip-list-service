@@ -341,3 +341,43 @@ def get_records_from_zone(zone_id, record_prefixes):
                     continue
     print('  Found %s records that match given prefix' % (str(len(set(entries)))))
     return list(set(entries))
+
+
+def get_zone_records(zone_id):
+    resource_record_sets = []
+    r53_client = boto3.client('route53')
+    if r53_client:
+        resource_record_sets = get_all_records(r53_client, zone_id)
+    return resource_record_sets
+
+
+# Given a list of resource record sets, return prefixed record sets matching given prefix(es)
+def get_matching_records(resource_record_sets, record_prefixes):
+    entries = []
+    if not isinstance(record_prefixes, list):
+        record_prefixes = [record_prefixes]
+    print(f"  record_prefixes: {record_prefixes}")
+    for record in resource_record_sets:
+        for prefix in record_prefixes:
+            try:
+                if re.match(prefix, record['Name']):
+                    if 'ResourceRecords' in record:
+                        entry = record['ResourceRecords'][0]['Value']
+                        # Check if it's not an IP address.. Since the way this is coded it's easier than
+                        # checking the type (we're searching for an A record)
+                        if not re.match("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", entry):
+                            try:
+                                for address in [str(i[4][0]) for i in socket.getaddrinfo(entry, 80)]:
+                                    if address not in entries:
+                                        entries.append(address)
+                            # Nothing we can do
+                            except Exception:
+                                continue
+                        else:
+                            entries.append(entry)
+            except Exception:
+                print('  Exception trying to match records')
+                continue
+
+    print('  Found %s records that match given prefix' % (str(len(set(entries)))))
+    return list(set(entries))

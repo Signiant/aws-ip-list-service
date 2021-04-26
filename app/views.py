@@ -37,14 +37,14 @@ except:
 
 @app.route('/')
 def handle_index():
-    redir = None
+    redirect_to_https = None
     if NOHTTPS == None:
         proto = request.headers.get("X-Forwarded-Proto")
         if not proto == "https":
-            redir = _check_ssl(request.url)
+            redirect_to_https = _check_ssl(request.url)
 
-    if not redir == None:
-        return redir
+    if not redirect_to_https == None:
+        return redirect_to_https
 
     with open(PATH) as config_data:
         # This should handle json or yaml
@@ -219,13 +219,13 @@ def handle_service_list():
 
             if verbose:
                 print(request.url)
-            redir = None
+            redirect_to_https = None
             if NOHTTPS is None:
                 proto = request.headers.get("X-Forwarded-Proto")
                 if not proto == "https":
-                    redir = _check_ssl(request.url, verbose)
-            if redir is not None:
-                return redir
+                    redirect_to_https = _check_ssl(request.url, verbose)
+            if redirect_to_https is not None:
+                return redirect_to_https
 
             ret = {}
             for app in data['apps']:
@@ -246,13 +246,15 @@ def handle_service_list():
                 for config in app_config:
                     if config.get('R53'):
                         region_list = []
-                        for item in config['R53']:
-                            region_name = item.get('Name')
-                            if region_name not in region_list:
-                                region_list.append(region_name)
+                        for config_item in config['R53']:
+                            if 'Regions' in config_item:
+                                for item in config_item['Regions']:
+                                    region_name = item.get('Name')
+                                    if region_name not in region_list:
+                                        region_list.append(region_name)
                     elif config.get('S3'):
                         for item in config['S3']:
-                            region_name = item.get('region')
+                            region_name = item.get('Name')
                             if region_name not in region_list:
                                 region_list.append(region_name)
                     else:
@@ -354,27 +356,35 @@ def parse_data_from_file(app_name, chosen_region, app_cache_file, data=None, ver
                             output = json.load(filedata)
                         break
                     elif config.get('R53'):
-                        ret = {}
-                        for item in config['R53']:
-                            print('Getting records for %s' % item['Name'])
-                            ret[item['Name']] = {}
-
-                            ret[item['Name']]['all_ips'] = []
-                            ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'],
-                                                                                        item['Pattern'])
-                            if 'last_modified' in item:
-                                modified_date = str(item['last_modified'])
-                                ret[item['Name']]['last_modified'] = modified_date
-                            inclusions = item.get('inclusions')
+                        for config_item in config['R53']:
+                            ret = {}
+                            # Get all records for the given domain
+                            zone_id = config_item['HostedZoneId']
+                            print(f'Getting all records for Zone with ID {zone_id}')
+                            all_zone_records = awslib.get_zone_records(zone_id)
+                            inclusions = config_item['inclusions']
+                            ip_inclusions = []
                             if inclusions:
-                                print('Adding inclusions from config')
+                                print('Getting inclusions from config')
                                 if 'dns_list' in inclusions:
                                     for dns in inclusions['dns_list']:
                                         dns_ips = awslib.list_balancer_ips(dns)
-                                        ret[item['Name']]['all_ips'].extend(dns_ips)
+                                        ip_inclusions.extend(dns_ips)
                                 if 'ip_list' in inclusions:
-                                    ret[item['Name']]['all_ips'].extend(inclusions['ip_list'])
-                        break
+                                    ip_inclusions.extend(inclusions['ip_list'])
+                            for item in config_item['Regions']:
+                                print('Getting records for %s' % item['Name'])
+                                ret[item['Name']] = {}
+
+                                ret[item['Name']]['all_ips'] = []
+                                ret[item['Name']]['all_ips'] = awslib.get_matching_records(all_zone_records,
+                                                                                           item['Pattern'])
+                                if 'last_modified' in item:
+                                    modified_date = str(item['last_modified'])
+                                    ret[item['Name']]['last_modified'] = modified_date
+                                if len(ip_inclusions) > 0:
+                                    ret[item['Name']]['all_ips'].extend(ip_inclusions)
+                            break
                     elif config.get('S3'):
                         ret = {}
                         for item in config['S3']:
@@ -402,93 +412,93 @@ def parse_data_from_file(app_name, chosen_region, app_cache_file, data=None, ver
                                 if 'ip_list' in inclusions:
                                     ret[item['Name']]['all_ips'].extend(inclusions['ip_list'])
                         break
+                    else:
+                        region = config['region']
 
-                    region = config['region']
+                        # only run next section if region equal chosen_region
+                        if chosen_region:
+                            if chosen_region != region:
+                                continue
 
-                    # only run next section if region equal chosen_region
-                    if chosen_region:
-                        if chosen_region != region:
-                            continue
-
-                    dnsname = config.get('dnsname')
-                    inclusions = config.get('inclusions')
-                    exclusions = config.get('exclusions')
-                    eip_check = config.get('show_eip')
-                    lb_check = config.get('show_lb_ip')
-                    inst_check = config.get('show_inst_ip')
-                    modified_date = config.get('last_modified')
-                    if not ret.get(region):
-                        ret[region] = {}
-                        if 'last_modified' in config:
-                            modified_date = str(config.get('last_modified'))
-                            ret[region]['last_modified'] = modified_date
-                    if not ret[region].get('all_ips'):
-                        ret[region]['all_ips'] = []
-
-                    if eip_check:
-                        eips = awslib.list_eips(region, filter=exclusions)
-                        # verbose only makes sense if we're not getting ALL EIPs
-                        if verbose:
-                            if not ret[region].get('eips'):
-                                ret[region]['eips'] = eips
-                            else:
-                                ret[region]['eips'].extend(eips)
+                        dnsname = config.get('dnsname')
+                        inclusions = config.get('inclusions')
+                        exclusions = config.get('exclusions')
+                        eip_check = config.get('show_eip')
+                        lb_check = config.get('show_lb_ip')
+                        inst_check = config.get('show_inst_ip')
+                        modified_date = config.get('last_modified')
+                        if not ret.get(region):
+                            ret[region] = {}
+                            if 'last_modified' in config:
+                                modified_date = str(config.get('last_modified'))
+                                ret[region]['last_modified'] = modified_date
+                        if not ret[region].get('all_ips'):
+                            ret[region]['all_ips'] = []
 
                         if eip_check:
-                            ret[region]['all_ips'].extend(eips)
+                            eips = awslib.list_eips(region, filter=exclusions)
+                            # verbose only makes sense if we're not getting ALL EIPs
+                            if verbose:
+                                if not ret[region].get('eips'):
+                                    ret[region]['eips'] = eips
+                                else:
+                                    ret[region]['eips'].extend(eips)
 
-                    if lb_check:
-                        elb = awslib.list_balancer_ips(dnsname)
-
-                        if verbose:
-                            if not ret[region].get('elb'):
-                                ret[region]['elb'] = elb
-                            else:
-                                ret[region]['elb'].extend(elb)
+                            if eip_check:
+                                ret[region]['all_ips'].extend(eips)
 
                         if lb_check:
-                            ret[region]['all_ips'].extend(elb)
+                            elb = awslib.list_balancer_ips(dnsname)
 
-                    if inst_check:
-                        lb_names = config.get('lb_names')
-                        lb_name = None
-                        if not lb_names:
-                            lb_name = awslib.get_active_balancer(dnsname, region)
+                            if verbose:
+                                if not ret[region].get('elb'):
+                                    ret[region]['elb'] = elb
+                                else:
+                                    ret[region]['elb'].extend(elb)
 
-                        if not lb_name and not lb_names:
-                            print('ERROR: Unable to determine LB name(s) - cannot get instance IPs')
-                        else:
+                            if lb_check:
+                                ret[region]['all_ips'].extend(elb)
+
+                        if inst_check:
+                            lb_names = config.get('lb_names')
+                            lb_name = None
                             if not lb_names:
-                                lb_names = [lb_name]
-                            for lb in lb_names:
-                                inst_ips = awslib.list_instance_ips(lb.lower(), region)
-                                if verbose:
-                                    if not ret[region].get('instance_ips'):
-                                        ret[region]['instance_ips'] = inst_ips
-                                    else:
-                                        ret[region]['instance_ips'].extend(inst_ips)
+                                lb_name = awslib.get_active_balancer(dnsname, region)
 
-                                if inst_check:
-                                    ret[region]['all_ips'].extend(inst_ips)
+                            if not lb_name and not lb_names:
+                                print('ERROR: Unable to determine LB name(s) - cannot get instance IPs')
+                            else:
+                                if not lb_names:
+                                    lb_names = [lb_name]
+                                for lb in lb_names:
+                                    inst_ips = awslib.list_instance_ips(lb.lower(), region)
+                                    if verbose:
+                                        if not ret[region].get('instance_ips'):
+                                            ret[region]['instance_ips'] = inst_ips
+                                        else:
+                                            ret[region]['instance_ips'].extend(inst_ips)
 
-                    if inclusions:
-                        print('Adding inclusions from config')
-                        if 'dns_list' in inclusions:
-                            for dns in inclusions['dns_list']:
-                                dns_ips = awslib.list_balancer_ips(dns)
+                                    if inst_check:
+                                        ret[region]['all_ips'].extend(inst_ips)
+
+                        if inclusions:
+                            print('Adding inclusions from config')
+                            if 'dns_list' in inclusions:
+                                for dns in inclusions['dns_list']:
+                                    dns_ips = awslib.list_balancer_ips(dns)
+                                    if verbose:
+                                        if not ret[region].get('inclusions'):
+                                            ret[region]['inclusions'] = dns_ips
+                                        else:
+                                            ret[region]['inclusions'].extend(dns_ips)
+                                    ret[region]['all_ips'].extend(dns_ips)
+                            if 'ip_list' in inclusions:
                                 if verbose:
                                     if not ret[region].get('inclusions'):
-                                        ret[region]['inclusions'] = dns_ips
+                                        ret[region]['inclusions'] = inclusions['ip_list']
                                     else:
-                                        ret[region]['inclusions'].extend(dns_ips)
-                                ret[region]['all_ips'].extend(dns_ips)
-                        if 'ip_list' in inclusions:
-                            if verbose:
-                                if not ret[region].get('inclusions'):
-                                    ret[region]['inclusions'] = inclusions['ip_list']
-                                else:
-                                    ret[region]['inclusions'].extend(inclusions['ip_list'])
-                            ret[region]['all_ips'].extend(inclusions['ip_list'])
+                                        ret[region]['inclusions'].extend(inclusions['ip_list'])
+                                ret[region]['all_ips'].extend(inclusions['ip_list'])
 
         if not ret:
             return redirect(url_for('handle_index'), code=302)
