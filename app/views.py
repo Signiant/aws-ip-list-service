@@ -362,8 +362,8 @@ def parse_data_from_file(app_name, chosen_region, app_cache_file, data=None, ver
                             zone_id = config_item['HostedZoneId']
                             print(f'Getting all records for Zone with ID {zone_id}')
                             all_zone_records = awslib.get_zone_records(zone_id)
-                            inclusions = config_item['inclusions']
                             ip_inclusions = []
+                            inclusions = config_item.get('inclusions')
                             if inclusions:
                                 print('Getting inclusions from config')
                                 if 'dns_list' in inclusions:
