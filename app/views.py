@@ -497,7 +497,7 @@ def parse_data_from_file(app_name, chosen_region, app_cache_file, data=None, ver
             ret = ip_list_sort(ret)
             _write_cache(app_cache_file, ret)
     except:
-        print("Error: Unable to load new information for app: " + str(appname))
+        print("Error: Unable to load new information for app: " + str(app_name))
         traceback.print_exc()
 
     return app_cache_file
