@@ -7,45 +7,46 @@ import yaml
 from json import dumps
 from os.path import join
 from flask import make_response, request, redirect, url_for
-import os, time
+import os
+import time
 import traceback
 
-bucket_name = os.environ.get('IPLIST_CONFIG_BUCKET')
-s3path = os.environ.get('IPLIST_CONFIG_PATH')
-nohttps = os.environ.get('NOHTTPS')
+BUCKET_NAME = os.environ.get('IPLIST_CONFIG_BUCKET')
+S3PATH = os.environ.get('IPLIST_CONFIG_PATH')
+NOHTTPS = os.environ.get('NOHTTPS')
 
-path = join('iplist_config', 'config')
+PATH = join('iplist_config', 'config')
 
-if s3path == None:
-    print ("No Env Labeled IPLIST_CONFIG_PATH")
-elif bucket_name == None:
-    print ("No bucket name specified")
+if S3PATH == None:
+    print("No Env Labeled IPLIST_CONFIG_PATH")
+elif BUCKET_NAME == None:
+    print("No bucket name specified")
 else:
-    awslib.get_file(bucket_name, s3path, path)
+    awslib.get_file(BUCKET_NAME, S3PATH, PATH)
 #####
 # Caching parameters
 #####
-cache_timeout_period_in_seconds = 300
-cache_root_directory = "/ip-range-cache"
+CACHE_TIMEOUT_PERIOD_IN_SECONDS = 300
+CACHE_ROOT_DIRECTORY = "/ip-range-cache"
 
 try:
-    os.makedirs(cache_root_directory)
+    os.makedirs(CACHE_ROOT_DIRECTORY)
 except:
     pass
 
 
 @app.route('/')
 def handle_index():
-    redir = None
-    if nohttps == None:
+    redirect_to_https = None
+    if NOHTTPS == None:
         proto = request.headers.get("X-Forwarded-Proto")
         if not proto == "https":
-            redir = _check_ssl(request.url)
+            redirect_to_https = _check_ssl(request.url)
 
-    if not redir == None:
-        return redir
+    if not redirect_to_https == None:
+        return redirect_to_https
 
-    with open(path) as config_data:
+    with open(PATH) as config_data:
         # This should handle json or yaml
         data = yaml.safe_load(config_data)
 
@@ -91,7 +92,7 @@ def _read_from_cache(app_cache_file):
         with open(app_cache_file, "r") as cache:
             cache_time = float(cache.readline().strip())
             current_time = time.time()
-            if (current_time - cache_time) > cache_timeout_period_in_seconds:
+            if (current_time - cache_time) > CACHE_TIMEOUT_PERIOD_IN_SECONDS:
                 read_from_cache = False
     except IOError:
         read_from_cache = False
@@ -100,7 +101,7 @@ def _read_from_cache(app_cache_file):
 
 @app.route('/all')
 def handle_all_app():
-    with open(path) as config_data:
+    with open(PATH) as config_data:
         # This should handle json or yaml
         data = yaml.safe_load(config_data)
 
@@ -108,8 +109,8 @@ def handle_all_app():
     for app in data['apps']:
         app_name_list.append(app['name'])
 
-    output=""
-    all_list={}
+    output = ""
+    all_list = {}
     for app_name in app_name_list:
         verbose = False
         chosen_region = None
@@ -130,18 +131,19 @@ def handle_all_app():
         if chosen_region:
             suffix = "." + chosen_region + suffix
 
-        app_cache_file = os.path.join(cache_root_directory, app_name.lower() + suffix)
-        app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, verbose)
+        app_cache_file = os.path.join(CACHE_ROOT_DIRECTORY, app_name.lower() + suffix)
+        app_cache_file = parse_data_from_file(app_name, chosen_region, app_cache_file, data, verbose)
 
         with open(app_cache_file, "r") as cache:
             # read the first line as cache time
             cache_time = cache.readline()
             line = cache.readline()
 
-            all_list[app_name]=eval(line)
+            all_list[app_name] = eval(line)
             output = output + line
 
     return jsonify(**all_list)
+
 
 @app.route('/<appname>')
 def handle_app(appname):
@@ -164,14 +166,14 @@ def handle_app(appname):
     if chosen_region:
         suffix = "." + chosen_region + suffix
 
-    app_cache_file = os.path.join(cache_root_directory,appname.lower() + suffix)
+    app_cache_file = os.path.join(CACHE_ROOT_DIRECTORY, appname.lower() + suffix)
 
     if _read_from_cache(app_cache_file):
         print("Reading cached data for this request.")
     else:
         print("Cache is out of date. Refreshing for this request.")
 
-        app_cache_file = parse_data_from_file(appname, chosen_region, app_cache_file, verbose)
+        app_cache_file = parse_data_from_file(appname, chosen_region, app_cache_file, verbose=verbose)
 
     with open(app_cache_file, "r") as cache:
         # read the first line as cache time
@@ -203,7 +205,7 @@ def handle_service_list():
 
     print("Getting service list")
 
-    cache_file = os.path.join(cache_root_directory, 'service-list' + suffix)
+    cache_file = os.path.join(CACHE_ROOT_DIRECTORY, 'service-list' + suffix)
 
     if _read_from_cache(cache_file):
         print("Reading cached data for this request.")
@@ -211,19 +213,19 @@ def handle_service_list():
         print("Cache is out of date. Refreshing for this request.")
 
         try:
-            with open(path) as config_data:
+            with open(PATH) as config_data:
                 # This should handle json or yaml
                 data = yaml.safe_load(config_data)
 
             if verbose:
-                print (request.url)
-            redir = None
-            if nohttps is None:
+                print(request.url)
+            redirect_to_https = None
+            if NOHTTPS is None:
                 proto = request.headers.get("X-Forwarded-Proto")
                 if not proto == "https":
-                    redir = _check_ssl(request.url, verbose)
-            if redir is not None:
-                return redir
+                    redirect_to_https = _check_ssl(request.url, verbose)
+            if redirect_to_https is not None:
+                return redirect_to_https
 
             ret = {}
             for app in data['apps']:
@@ -244,13 +246,15 @@ def handle_service_list():
                 for config in app_config:
                     if config.get('R53'):
                         region_list = []
-                        for item in config['R53']:
-                            region_name = item.get('Name')
-                            if region_name not in region_list:
-                                region_list.append(region_name)
+                        for config_item in config['R53']:
+                            if 'Regions' in config_item:
+                                for item in config_item['Regions']:
+                                    region_name = item.get('Name')
+                                    if region_name not in region_list:
+                                        region_list.append(region_name)
                     elif config.get('S3'):
                         for item in config['S3']:
-                            region_name = item.get('region')
+                            region_name = item.get('Name')
                             if region_name not in region_list:
                                 region_list.append(region_name)
                     else:
@@ -265,7 +269,7 @@ def handle_service_list():
             else:
                 _write_cache(cache_file, ret)
         except:
-            print ("Error: Unable to load new information")
+            print("Error: Unable to load new information")
             traceback.print_exc()
 
     with open(cache_file, "r") as cache:
@@ -292,7 +296,8 @@ def ip_list_sort(ret):
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico',
+                               mimetype='image/vnd.microsoft.icon')
 
 
 def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
@@ -305,72 +310,81 @@ def jsonify(status=200, indent=4, sort_keys=False, **kwargs):
 
 def _check_ssl(url, verbose=False):
     if verbose:
-        print ("Current scheme: %s" % url[:5])
+        print("Current scheme: %s" % url[:5])
     if url[:5] == "https":
         return None
     else:
         return redirect("https" + url[4:], code=302)
 
 
-def _write_cache(app_cache_file,data):
+def _write_cache(app_cache_file, data):
     with open(app_cache_file, "w+") as cache:
         cache.write(str(time.time()))
         cache.write("\n")
         cache.write(str(data))
 
 
-def parse_data_from_file(appname, chosen_region, app_cache_file, verbose):
+def parse_data_from_file(app_name, chosen_region, app_cache_file, data=None, verbose=False):
     try:
-        with open(path) as config_data:
-            # This should handle json or yaml
-            data = yaml.safe_load(config_data)
-
         ret = {}
+
+        if not data:
+            with open(PATH) as config_data:
+                # This should handle json or yaml
+                data = yaml.safe_load(config_data)
 
         if verbose:
             print(request.url)
-        redir = None
-        if nohttps == None:
+        redirect_to_https = None
+        if NOHTTPS is None:
             proto = request.headers.get("X-Forwarded-Proto")
             if not proto == "https":
-                redir = _check_ssl(request.url, verbose)
-        if not redir == None:
-            return redir
+                redirect_to_https = _check_ssl(request.url, verbose)
+        if redirect_to_https:
+            return redirect_to_https
         for app in data['apps']:
             # create url link for both name and alternative name for ip-range apps
-            if appname.lower() == app['name'].lower() or appname.lower() == str(app.get('altname')).lower():
+            if app_name.lower() == app['name'].lower() or app_name.lower() == str(app.get('altname')).lower():
                 app_config = app['config']
 
                 for config in app_config:
 
                     if config.get('s3filepath'):
                         datapath = config.get('localpath')
-                        awslib.get_file(bucket_name, config['s3filepath'], datapath)
+                        awslib.get_file(BUCKET_NAME, config['s3filepath'], datapath)
                         with open(datapath) as filedata:
                             output = json.load(filedata)
                         break
                     elif config.get('R53'):
-                        ret = {}
-                        for item in config['R53']:
-                            print('Getting records for %s' % item['Name'])
-                            ret[item['Name']] = {}
-
-                            ret[item['Name']]['all_ips'] = []
-                            ret[item['Name']]['all_ips'] = awslib.get_records_from_zone(item['HostedZoneId'],
-                                                                                        item['Pattern'])
-                            if 'last_modified' in item:
-                                modified_date = str(item['last_modified'])
-                                ret[item['Name']]['last_modified'] = modified_date
-                            inclusions = item.get('inclusions')
+                        for config_item in config['R53']:
+                            ret = {}
+                            # Get all records for the given domain
+                            zone_id = config_item['HostedZoneId']
+                            print(f'Getting all records for Zone with ID {zone_id}')
+                            all_zone_records = awslib.get_zone_records(zone_id)
+                            ip_inclusions = []
+                            inclusions = config_item.get('inclusions')
                             if inclusions:
-                                print('Adding inclusions from config')
+                                print('Getting inclusions from config')
                                 if 'dns_list' in inclusions:
                                     for dns in inclusions['dns_list']:
                                         dns_ips = awslib.list_balancer_ips(dns)
-                                        ret[item['Name']]['all_ips'].extend(dns_ips)
+                                        ip_inclusions.extend(dns_ips)
                                 if 'ip_list' in inclusions:
-                                    ret[item['Name']]['all_ips'].extend(inclusions['ip_list'])
-                        break
+                                    ip_inclusions.extend(inclusions['ip_list'])
+                            for item in config_item['Regions']:
+                                print('Getting records for %s' % item['Name'])
+                                ret[item['Name']] = {}
+
+                                ret[item['Name']]['all_ips'] = []
+                                ret[item['Name']]['all_ips'] = awslib.get_matching_records(all_zone_records,
+                                                                                           item['Pattern'])
+                                if 'last_modified' in item:
+                                    modified_date = str(item['last_modified'])
+                                    ret[item['Name']]['last_modified'] = modified_date
+                                if len(ip_inclusions) > 0:
+                                    ret[item['Name']]['all_ips'].extend(ip_inclusions)
+                            break
                     elif config.get('S3'):
                         ret = {}
                         for item in config['S3']:
@@ -398,93 +412,93 @@ def parse_data_from_file(appname, chosen_region, app_cache_file, verbose):
                                 if 'ip_list' in inclusions:
                                     ret[item['Name']]['all_ips'].extend(inclusions['ip_list'])
                         break
+                    else:
+                        region = config['region']
 
-                    region = config['region']
+                        # only run next section if region equal chosen_region
+                        if chosen_region:
+                            if chosen_region != region:
+                                continue
 
-                    # only run next section if region equal chosen_region
-                    if chosen_region:
-                        if chosen_region != region:
-                            continue
-
-                    dnsname = config.get('dnsname')
-                    inclusions = config.get('inclusions')
-                    exclusions = config.get('exclusions')
-                    eip_check = config.get('show_eip')
-                    lb_check = config.get('show_lb_ip')
-                    inst_check = config.get('show_inst_ip')
-                    modified_date = config.get('last_modified')
-                    if not ret.get(region):
-                        ret[region] = {}
-                        if 'last_modified' in config:
-                            modified_date = str(config.get('last_modified'))
-                            ret[region]['last_modified'] = modified_date
-                    if not ret[region].get('all_ips'):
-                        ret[region]['all_ips'] = []
-
-                    if eip_check:
-                        eips = awslib.list_eips(region, filter=exclusions)
-                        # verbose only makes sense if we're not getting ALL EIPs
-                        if verbose:
-                            if not ret[region].get('eips'):
-                                ret[region]['eips'] = eips
-                            else:
-                                ret[region]['eips'].extend(eips)
+                        dnsname = config.get('dnsname')
+                        inclusions = config.get('inclusions')
+                        exclusions = config.get('exclusions')
+                        eip_check = config.get('show_eip')
+                        lb_check = config.get('show_lb_ip')
+                        inst_check = config.get('show_inst_ip')
+                        modified_date = config.get('last_modified')
+                        if not ret.get(region):
+                            ret[region] = {}
+                            if 'last_modified' in config:
+                                modified_date = str(config.get('last_modified'))
+                                ret[region]['last_modified'] = modified_date
+                        if not ret[region].get('all_ips'):
+                            ret[region]['all_ips'] = []
 
                         if eip_check:
-                            ret[region]['all_ips'].extend(eips)
+                            eips = awslib.list_eips(region, filter=exclusions)
+                            # verbose only makes sense if we're not getting ALL EIPs
+                            if verbose:
+                                if not ret[region].get('eips'):
+                                    ret[region]['eips'] = eips
+                                else:
+                                    ret[region]['eips'].extend(eips)
 
-                    if lb_check:
-                        elb = awslib.list_balancer_ips(dnsname)
-
-                        if verbose:
-                            if not ret[region].get('elb'):
-                                ret[region]['elb'] = elb
-                            else:
-                                ret[region]['elb'].extend(elb)
+                            if eip_check:
+                                ret[region]['all_ips'].extend(eips)
 
                         if lb_check:
-                            ret[region]['all_ips'].extend(elb)
+                            elb = awslib.list_balancer_ips(dnsname)
 
-                    if inst_check:
-                        lb_names = config.get('lb_names')
-                        lb_name = None
-                        if not lb_names:
-                            lb_name = awslib.get_active_balancer(dnsname, region)
+                            if verbose:
+                                if not ret[region].get('elb'):
+                                    ret[region]['elb'] = elb
+                                else:
+                                    ret[region]['elb'].extend(elb)
 
-                        if not lb_name and not lb_names:
-                            print('ERROR: Unable to determine LB name(s) - cannot get instance IPs')
-                        else:
+                            if lb_check:
+                                ret[region]['all_ips'].extend(elb)
+
+                        if inst_check:
+                            lb_names = config.get('lb_names')
+                            lb_name = None
                             if not lb_names:
-                                lb_names = [lb_name]
-                            for lb in lb_names:
-                                inst_ips = awslib.list_instance_ips(lb.lower(), region)
-                                if verbose:
-                                    if not ret[region].get('instance_ips'):
-                                        ret[region]['instance_ips'] = inst_ips
-                                    else:
-                                        ret[region]['instance_ips'].extend(inst_ips)
+                                lb_name = awslib.get_active_balancer(dnsname, region)
 
-                                if inst_check:
-                                    ret[region]['all_ips'].extend(inst_ips)
+                            if not lb_name and not lb_names:
+                                print('ERROR: Unable to determine LB name(s) - cannot get instance IPs')
+                            else:
+                                if not lb_names:
+                                    lb_names = [lb_name]
+                                for lb in lb_names:
+                                    inst_ips = awslib.list_instance_ips(lb.lower(), region)
+                                    if verbose:
+                                        if not ret[region].get('instance_ips'):
+                                            ret[region]['instance_ips'] = inst_ips
+                                        else:
+                                            ret[region]['instance_ips'].extend(inst_ips)
 
-                    if inclusions:
-                        print('Adding inclusions from config')
-                        if 'dns_list' in inclusions:
-                            for dns in inclusions['dns_list']:
-                                dns_ips = awslib.list_balancer_ips(dns)
+                                    if inst_check:
+                                        ret[region]['all_ips'].extend(inst_ips)
+
+                        if inclusions:
+                            print('Adding inclusions from config')
+                            if 'dns_list' in inclusions:
+                                for dns in inclusions['dns_list']:
+                                    dns_ips = awslib.list_balancer_ips(dns)
+                                    if verbose:
+                                        if not ret[region].get('inclusions'):
+                                            ret[region]['inclusions'] = dns_ips
+                                        else:
+                                            ret[region]['inclusions'].extend(dns_ips)
+                                    ret[region]['all_ips'].extend(dns_ips)
+                            if 'ip_list' in inclusions:
                                 if verbose:
                                     if not ret[region].get('inclusions'):
-                                        ret[region]['inclusions'] = dns_ips
+                                        ret[region]['inclusions'] = inclusions['ip_list']
                                     else:
-                                        ret[region]['inclusions'].extend(dns_ips)
-                                ret[region]['all_ips'].extend(dns_ips)
-                        if 'ip_list' in inclusions:
-                            if verbose:
-                                if not ret[region].get('inclusions'):
-                                    ret[region]['inclusions'] = inclusions['ip_list']
-                                else:
-                                    ret[region]['inclusions'].extend(inclusions['ip_list'])
-                            ret[region]['all_ips'].extend(inclusions['ip_list'])
+                                        ret[region]['inclusions'].extend(inclusions['ip_list'])
+                                ret[region]['all_ips'].extend(inclusions['ip_list'])
 
         if not ret:
             return redirect(url_for('handle_index'), code=302)
@@ -493,7 +507,7 @@ def parse_data_from_file(appname, chosen_region, app_cache_file, verbose):
             ret = ip_list_sort(ret)
             _write_cache(app_cache_file, ret)
     except:
-        print("Error: Unable to load new information for app: " + str(appname))
+        print("Error: Unable to load new information for app: " + str(app_name))
         traceback.print_exc()
 
     return app_cache_file
