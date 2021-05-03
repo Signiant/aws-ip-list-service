@@ -141,8 +141,8 @@ def handle_all_app():
 
             all_list[app_name] = eval(line)
             output = output + line
-
-    return jsonify(**all_list)
+    return render_template("all.html", data=output)
+    # return jsonify(**all_list)
 
 
 @app.route('/<appname>')
